@@ -1068,6 +1068,7 @@ ELinuxWindowWayland::ELinuxWindowWayland(
       wl_data_offer_(nullptr),
       wl_data_source_(nullptr),
       serial_(0),
+      text_input_serial_(0),
       zwp_text_input_manager_v1_(nullptr),
       zwp_text_input_manager_v3_(nullptr),
       zwp_text_input_v1_(nullptr),
@@ -1890,14 +1891,34 @@ void ELinuxWindowWayland::ShowVirtualKeyboard() {
       hint |= ZWP_TEXT_INPUT_V3_CONTENT_HINT_MULTILINE;
     }
 
-    zwp_text_input_v3_set_content_type(zwp_text_input_v3_, hint, purpose);
+    zwp_text_input_v3_set_content_type(zwp_text_input_v3_, hint, purpose); // Untested code path
     zwp_text_input_v3_commit(zwp_text_input_v3_);
   } else {
     if (native_window_) {
-      zwp_text_input_v1_show_input_panel(zwp_text_input_v1_);
+      // Map Flutter input types to Wayland v1 content purposes.
+      uint32_t hint = ZWP_TEXT_INPUT_V1_CONTENT_HINT_NONE;
+      uint32_t purpose = ZWP_TEXT_INPUT_V1_CONTENT_PURPOSE_NORMAL;
+
+      if (text_input_type_ == "TextInputType.number") {
+        purpose = ZWP_TEXT_INPUT_V1_CONTENT_PURPOSE_NUMBER;
+      } else if (text_input_type_ == "TextInputType.phone") {
+        purpose = ZWP_TEXT_INPUT_V1_CONTENT_PURPOSE_PHONE;
+      } else if (text_input_type_ == "TextInputType.emailAddress") {
+        purpose = ZWP_TEXT_INPUT_V1_CONTENT_PURPOSE_EMAIL;
+      } else if (text_input_type_ == "TextInputType.url") {
+        purpose = ZWP_TEXT_INPUT_V1_CONTENT_PURPOSE_URL;
+      } else if (text_input_type_ == "TextInputType.visiblePassword") {
+        purpose = ZWP_TEXT_INPUT_V1_CONTENT_PURPOSE_PASSWORD;
+      } else if (text_input_type_ == "TextInputType.multiline") {
+        hint |= ZWP_TEXT_INPUT_V1_CONTENT_HINT_MULTILINE;
+      }
+
       zwp_text_input_v1_activate(zwp_text_input_v1_,
                                  seat_inputs_map_.begin()->first,
                                  native_window_->Surface());
+      zwp_text_input_v1_set_content_type(zwp_text_input_v1_, hint, purpose);
+      zwp_text_input_v1_commit_state(zwp_text_input_v1_, ++text_input_serial_);
+      zwp_text_input_v1_show_input_panel(zwp_text_input_v1_);
     }
   }
 }

@@ -219,6 +219,8 @@ class ELinuxWindowWayland : public ELinuxWindow, public WindowBindingHandler {
 
   // The current text input type (e.g., "TextInputType.number").
   std::string text_input_type_;
+
+  uint32_t text_input_serial_;
 };
 
 }  // namespace flutter
