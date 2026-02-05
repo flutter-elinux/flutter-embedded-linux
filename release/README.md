@@ -6,10 +6,7 @@ To run with docker:
 # build container
 docker build -t flutter-build .
 # build flutter engine and flutter-elinux variants
-docker run -ti --rm --user "$(id -u):$(id -g)" \
-    -v "$PWD":/flutter -w /flutter \
-    --env HOME=/flutter/home flutter-build \
-    ./build-all.sh [build-all options]
+./run-docker.sh ./build-all.sh [build-all options]
 # check build is complete and output instructions to make release
 ./prepare-release.sh output
 ```

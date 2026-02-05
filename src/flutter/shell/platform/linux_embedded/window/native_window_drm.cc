@@ -13,6 +13,13 @@
 #include "flutter/shell/platform/linux_embedded/logger.h"
 #include "flutter/shell/platform/linux_embedded/surface/cursor_data.h"
 
+// Allow building with mesa < 21
+// This is a linux uapi header value so there is no risk in hardcoding it if
+// unset
+#ifdef DRM_MODE_CONNECTOR_USB
+#define DRM_MODE_CONNECTOR_USB 20
+#endif
+
 namespace flutter {
 namespace {
 constexpr char kFlutterDrmConnectorEnvironmentKey[] = "FLUTTER_DRM_CONNECTOR";
