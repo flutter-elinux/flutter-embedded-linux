@@ -5,6 +5,9 @@
 #ifndef FLUTTER_SHELL_PLATFORM_COMMON_CLIENT_WRAPPER_INCLUDE_FLUTTER_BYTE_STREAMS_H_
 #define FLUTTER_SHELL_PLATFORM_COMMON_CLIENT_WRAPPER_INCLUDE_FLUTTER_BYTE_STREAMS_H_
 
+#include <cstddef>
+#include <cstdint>
+
 // Interfaces for interacting with a stream of bytes, for use in codecs.
 
 namespace flutter {
