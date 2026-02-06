@@ -28,6 +28,7 @@
 #ifndef FLUTTER_SHELL_PLATFORM_LINUX_EMBEDDED_SURFACE_CURSOR_DATA_H_
 #define FLUTTER_SHELL_PLATFORM_LINUX_EMBEDDED_SURFACE_CURSOR_DATA_H_
 
+#include <cstdint>
 #include <unordered_map>
 
 namespace flutter {

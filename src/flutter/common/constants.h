@@ -5,6 +5,8 @@
 #ifndef FLUTTER_COMMON_CONSTANTS_H_
 #define FLUTTER_COMMON_CONSTANTS_H_
 
+#include <cstdint>
+
 namespace flutter {
 constexpr double kMegaByteSizeInBytes = (1 << 20);
 

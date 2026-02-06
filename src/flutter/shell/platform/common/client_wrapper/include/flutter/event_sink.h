@@ -5,6 +5,9 @@
 #ifndef FLUTTER_SHELL_PLATFORM_COMMON_CLIENT_WRAPPER_INCLUDE_FLUTTER_EVENT_SINK_H_
 #define FLUTTER_SHELL_PLATFORM_COMMON_CLIENT_WRAPPER_INCLUDE_FLUTTER_EVENT_SINK_H_
 
+#include <cstring>
+#include <string>
+
 namespace flutter {
 
 class EncodableValue;
