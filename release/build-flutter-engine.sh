@@ -132,17 +132,16 @@ else
 	RELEASE_OUTDIR="host_release"
 fi
 
-
 # debug mode
-./flutter/tools/gn --runtime-mode debug ${ARCH_OPTION} --unoptimized --embedder-for-target --disable-desktop-embeddings --no-build-embedder-examples --enable-fontconfig --no-goma
+./flutter/tools/gn --runtime-mode debug ${ARCH_OPTION} --unoptimized --embedder-for-target --disable-desktop-embeddings --no-build-embedder-examples --enable-fontconfig --no-goma --stripped
 ninja -C out/${DEBUG_OUTDIR}
 
 # profile mode
-./flutter/tools/gn --runtime-mode profile ${ARCH_OPTION} --no-lto --embedder-for-target --disable-desktop-embeddings --no-build-embedder-examples --enable-fontconfig --no-goma
+./flutter/tools/gn --runtime-mode profile ${ARCH_OPTION} --no-lto --embedder-for-target --disable-desktop-embeddings --no-build-embedder-examples --enable-fontconfig --no-goma --stripped
 ninja -C out/${PROFILE_OUTDIR}
 
 # release mode
-./flutter/tools/gn --runtime-mode release ${ARCH_OPTION} --embedder-for-target --disable-desktop-embeddings --no-build-embedder-examples --enable-fontconfig --no-goma
+./flutter/tools/gn --runtime-mode release ${ARCH_OPTION} --embedder-for-target --disable-desktop-embeddings --no-build-embedder-examples --enable-fontconfig --no-goma --stripped
 ninja -C out/${RELEASE_OUTDIR}
 
 popd
