@@ -17,6 +17,7 @@
 #endif
 
 #include <chrono>
+#include <cstring>
 #include <memory>
 #include <optional>
 #include <string>
