@@ -16,7 +16,7 @@
 // Allow building with mesa < 21
 // This is a linux uapi header value so there is no risk in hardcoding it if
 // unset
-#ifdef DRM_MODE_CONNECTOR_USB
+#ifndef DRM_MODE_CONNECTOR_USB
 #define DRM_MODE_CONNECTOR_USB 20
 #endif
 
