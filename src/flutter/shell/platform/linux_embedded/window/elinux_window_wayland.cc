@@ -299,7 +299,12 @@ const wl_seat_listener ELinuxWindowWayland::kWlSeatListener = {
       if ((caps & WL_SEAT_CAPABILITY_POINTER) && !inputs.pointer) {
         inputs.pointer = wl_seat_get_pointer(seat);
         wl_pointer_add_listener(inputs.pointer, &kWlPointerListener, self);
+        ELINUX_LOG(TRACE) << "Pointer device connected: " << inputs.pointer;
       } else if (!(caps & WL_SEAT_CAPABILITY_POINTER) && inputs.pointer) {
+        ELINUX_LOG(TRACE) << "Pointer device disconnecting: " << inputs.pointer;
+        if (self->cursor_info_.pointer == inputs.pointer) {
+          self->cursor_info_.pointer = nullptr;
+        }
         wl_pointer_release(inputs.pointer);
         inputs.pointer = nullptr;
       }
@@ -1526,6 +1531,9 @@ void ELinuxWindowWayland::UpdateVirtualKeyboardStatus(
 
 void ELinuxWindowWayland::UpdateFlutterCursor(const std::string& cursor_name) {
   if (view_properties_.use_mouse_cursor) {
+    if (!cursor_info_.pointer) {
+      return;
+    }
     if (cursor_name.compare(cursor_info_.cursor_name) == 0) {
       return;
     }
