@@ -95,7 +95,10 @@ FlutterDesktopViewControllerRef FlutterDesktopViewControllerCreate(
   // Take ownership of the engine, starting it if necessary.
   state->view->SetEngine(
       std::unique_ptr<flutter::FlutterELinuxEngine>(EngineFromHandle(engine)));
-  state->view->CreateRenderSurface();
+  if (!state->view->CreateRenderSurface()) {
+    return nullptr;
+  }
+
   if (!state->view->GetEngine()->running()) {
     if (!state->view->GetEngine()->RunWithEntrypoint(nullptr)) {
       return nullptr;
