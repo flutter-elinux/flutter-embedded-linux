@@ -221,6 +221,7 @@ class ELinuxWindowWayland : public ELinuxWindow, public WindowBindingHandler {
   std::string text_input_type_;
 
   uint32_t text_input_serial_;
+  std::string clipboard_data_;
 };
 
 }  // namespace flutter
