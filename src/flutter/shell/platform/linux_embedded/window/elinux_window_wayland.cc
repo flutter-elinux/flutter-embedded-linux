@@ -1407,7 +1407,8 @@ bool ELinuxWindowWayland::CreateRenderSurface(int32_t width_px,
     std::swap(width_px, height_px);
   }
   native_window_ = std::make_unique<NativeWindowWayland>(
-      wl_compositor_, width_px, height_px, view_properties_.enable_vsync);
+      wl_compositor_, width_px, height_px, view_properties_.enable_vsync,
+      view_properties_.disable_dirty_region_management);
 
   wl_surface_add_listener(native_window_->Surface(), &kWlSurfaceListener, this);
 

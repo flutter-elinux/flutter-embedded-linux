@@ -118,8 +118,9 @@ std::unique_ptr<ELinuxEGLSurface> ContextEgl::CreateOnscreenSurface(
     ELINUX_LOG(ERROR) << "Failed to create EGL window surface: "
                       << get_egl_error_cause();
   }
-  return std::make_unique<ELinuxEGLSurface>(surface, environment_->Display(),
-                                            context_, window->EnableVsync());
+  return std::make_unique<ELinuxEGLSurface>(
+      surface, environment_->Display(), context_, window->EnableVsync(),
+      !window->IsDirtyRegionManagementDisabled());
 }
 
 std::unique_ptr<ELinuxEGLSurface> ContextEgl::CreateOffscreenSurface(
@@ -150,9 +151,9 @@ std::unique_ptr<ELinuxEGLSurface> ContextEgl::CreateOffscreenSurface(
                         << get_egl_error_cause() << ")";
   }
 #endif
-  return std::make_unique<ELinuxEGLSurface>(surface, environment_->Display(),
-                                            resource_context_,
-                                            window->EnableVsync());
+  return std::make_unique<ELinuxEGLSurface>(
+      surface, environment_->Display(), resource_context_,
+      window->EnableVsync(), !window->IsDirtyRegionManagementDisabled());
 }
 
 bool ContextEgl::IsValid() const {
