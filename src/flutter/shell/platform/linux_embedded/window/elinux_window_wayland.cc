@@ -1749,6 +1749,9 @@ void ELinuxWindowWayland::WlUnRegistryHandler(wl_registry* wl_registry,
     if (seat_inputs_iter != seat_inputs_map_.end()) {
       auto& inputs = seat_inputs_iter->second;
       if (inputs.pointer) {
+        if (cursor_info_.pointer == inputs.pointer) {
+          cursor_info_.pointer = nullptr;
+        }
         wl_pointer_release(inputs.pointer);
         inputs.pointer = nullptr;
       }
