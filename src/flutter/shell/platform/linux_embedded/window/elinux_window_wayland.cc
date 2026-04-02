@@ -1568,6 +1568,16 @@ void ELinuxWindowWayland::UpdateFlutterCursor(const std::string& cursor_name) {
 }
 
 std::string ELinuxWindowWayland::GetClipboardData() {
+  // If this application owns the current clipboard selection, return the
+  // locally cached data directly. Routing through the Wayland
+  // wl_data_offer_receive round-trip when source and consumer are the same
+  // process causes a deadlock: read() on the main thread blocks waiting for
+  // data that can only arrive after dispatching wl_data_source.send — which
+  // also runs on the main thread. See: issue #18.
+  if (wl_data_source_) {
+    return clipboard_data_;
+  }
+
   std::string str = "";
 
   if (wl_data_offer_) {
