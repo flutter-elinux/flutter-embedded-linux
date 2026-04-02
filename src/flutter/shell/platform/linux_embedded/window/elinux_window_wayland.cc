@@ -687,8 +687,20 @@ const wl_output_listener ELinuxWindowWayland::kWlOutputListener = {
 
         if (self->view_properties_.view_mode ==
             FlutterDesktopViewMode::kFullscreen) {
-          self->view_properties_.width = width;
-          self->view_properties_.height = height;
+          if (self->view_properties_.force_scale_factor) {
+            // force_scale_factor adjusts the Flutter engine's device pixel
+            // ratio only; it does not scale the surface buffer. Store the
+            // display dimensions as logical DIP so that the invariant
+            // view_properties_.width * current_scale_ == native_px holds,
+            // consistent with xdg_toplevel_listener.configure.
+            self->view_properties_.width =
+                static_cast<int32_t>(width / self->current_scale_);
+            self->view_properties_.height =
+                static_cast<int32_t>(height / self->current_scale_);
+          } else {
+            self->view_properties_.width = width;
+            self->view_properties_.height = height;
+          }
           self->request_redraw_ = true;
         }
 
@@ -1388,8 +1400,17 @@ bool ELinuxWindowWayland::CreateRenderSurface(int32_t width_px,
   }
 
   if (view_properties_.view_mode == FlutterDesktopViewMode::kFullscreen) {
-    width_px = view_properties_.width * current_scale_;
-    height_px = view_properties_.height * current_scale_;
+    if (view_properties_.force_scale_factor &&
+        display_max_width_ > 0 && display_max_height_ > 0) {
+      // When force_scale_factor is active, the surface must be the native
+      // display resolution (display_max). Using display_max directly avoids
+      // floating-point rounding when current_scale_ is non-integer (e.g. 1.3).
+      width_px = display_max_width_;
+      height_px = display_max_height_;
+    } else {
+      width_px = view_properties_.width * current_scale_;
+      height_px = view_properties_.height * current_scale_;
+    }
   }
 
   ELINUX_LOG(TRACE) << "Created the Wayland surface: " << width_px << "x"
