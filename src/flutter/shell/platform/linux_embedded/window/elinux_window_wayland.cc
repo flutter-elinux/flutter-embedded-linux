@@ -1400,8 +1400,8 @@ bool ELinuxWindowWayland::CreateRenderSurface(int32_t width_px,
   }
 
   if (view_properties_.view_mode == FlutterDesktopViewMode::kFullscreen) {
-    if (view_properties_.force_scale_factor &&
-        display_max_width_ > 0 && display_max_height_ > 0) {
+    if (view_properties_.force_scale_factor && display_max_width_ > 0 &&
+        display_max_height_ > 0) {
       // When force_scale_factor is active, the surface must be the native
       // display resolution (display_max). Using display_max directly avoids
       // floating-point rounding when current_scale_ is non-integer (e.g. 1.3).
