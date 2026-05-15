@@ -18,7 +18,8 @@ class NativeWindowWayland : public NativeWindow {
   NativeWindowWayland(wl_compositor* compositor,
                       const size_t width_px,
                       const size_t height_px,
-                      bool enable_vsync);
+                      bool enable_vsync,
+                      bool disable_dirty_region_management = false);
   ~NativeWindowWayland();
 
   // |NativeWindow|

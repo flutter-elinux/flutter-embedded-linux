@@ -11,7 +11,8 @@ namespace flutter {
 NativeWindowWayland::NativeWindowWayland(wl_compositor* compositor,
                                          const size_t width_px,
                                          const size_t height_px,
-                                         bool enable_vsync) {
+                                         bool enable_vsync,
+                                         bool disable_dirty_region_management) {
   surface_ = wl_compositor_create_surface(compositor);
   if (!surface_) {
     ELINUX_LOG(ERROR) << "Failed to create the compositor surface.";
@@ -42,6 +43,7 @@ NativeWindowWayland::NativeWindowWayland(wl_compositor* compositor,
   }
 
   enable_vsync_ = enable_vsync;
+  disable_dirty_region_management_ = disable_dirty_region_management;
   width_ = width_px;
   height_ = height_px;
   valid_ = true;
