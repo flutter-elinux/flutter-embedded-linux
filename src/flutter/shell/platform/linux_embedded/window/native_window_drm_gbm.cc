@@ -4,6 +4,10 @@
 
 #include "flutter/shell/platform/linux_embedded/window/native_window_drm_gbm.h"
 
+#include <poll.h>
+#include <cerrno>
+#include <cstring>
+
 #include "flutter/shell/platform/linux_embedded/logger.h"
 #include "flutter/shell/platform/linux_embedded/surface/context_egl.h"
 #include "flutter/shell/platform/linux_embedded/surface/cursor_data.h"
@@ -56,6 +60,22 @@ NativeWindowDrmGbm::~NativeWindowDrmGbm() {
     gbm_cursor_bo_ = nullptr;
   }
 
+  // Drain any in-flight flip so we don't tear down state while the kernel
+  // still holds references to our buffers via a queued page flip.
+  if (!WaitForPageFlip() && drm_crtc_) {
+    // The kernel may still reference the queued flip's buffer. Force a
+    // synchronous modeset to the saved CRTC state so the kernel releases
+    // its reference before we destroy the GBM surface.
+    if (drmModeSetCrtc(drm_device_, drm_crtc_->crtc_id, drm_crtc_->buffer_id,
+                       drm_crtc_->x, drm_crtc_->y, &drm_connector_id_, 1,
+                       &drm_crtc_->mode) != 0) {
+      ELINUX_LOG(ERROR) << "Failed to restore CRTC during teardown: "
+                        << strerror(errno);
+    }
+    flip_pending_ = false;
+  }
+  ReleaseRetiredBuffer();
+
   if (drm_crtc_) {
     drmModeSetCrtc(drm_device_, drm_crtc_->crtc_id, drm_crtc_->buffer_id,
                    drm_crtc_->x, drm_crtc_->y, &drm_connector_id_, 1,
@@ -63,13 +83,19 @@ NativeWindowDrmGbm::~NativeWindowDrmGbm() {
     drmModeFreeCrtc(drm_crtc_);
   }
 
-  if (gbm_previous_bo_) {
-    drmModeRmFB(drm_device_, gbm_previous_fb_);
+  if (bo_in_kernel_ && window_) {
+    drmModeRmFB(drm_device_, fb_in_kernel_);
     gbm_surface_release_buffer(static_cast<gbm_surface*>(window_),
-                               gbm_previous_bo_);
+                               bo_in_kernel_);
+    bo_in_kernel_ = nullptr;
+  }
+
+  if (window_) {
     gbm_surface_destroy(static_cast<gbm_surface*>(window_));
     window_ = nullptr;
+  }
 
+  if (window_offscreen_) {
     gbm_surface_destroy(static_cast<gbm_surface*>(window_offscreen_));
     window_offscreen_ = nullptr;
   }
@@ -148,54 +174,201 @@ bool NativeWindowDrmGbm::Resize(const size_t width, const size_t height) {
     return false;
   }
 
-  if (!gbm_previous_bo_) {
+  if (!bo_in_kernel_) {
     // Do nothing until SwapBuffers() is called.
     // For example, called at the initialization process.
     return false;
   }
 
   ELINUX_LOG(INFO) << "resize: " << width << "x" << height;
-  drmModeRmFB(drm_device_, gbm_previous_fb_);
-  gbm_surface_release_buffer(static_cast<gbm_surface*>(window_),
-                             gbm_previous_bo_);
-  gbm_previous_bo_ = nullptr;
+
+  // Quiesce any pending flip and release displaced buffers before tearing
+  // the surface down.
+  if (!WaitForPageFlip()) {
+    ELINUX_LOG(ERROR) << "Cannot safely resize with in-flight page flip";
+    return false;
+  }
+  ReleaseRetiredBuffer();
+
+  drmModeRmFB(drm_device_, fb_in_kernel_);
+  gbm_surface_release_buffer(static_cast<gbm_surface*>(window_), bo_in_kernel_);
+  bo_in_kernel_ = nullptr;
+  fb_in_kernel_ = 0;
+
+  // The new surface needs a fresh modeset — its BOs aren't yet bound to a
+  // CRTC, so the next SwapBuffers() must re-issue drmModeSetCrtc().
+  modeset_done_ = false;
 
   gbm_surface_destroy(static_cast<gbm_surface*>(window_));
+  window_ = nullptr;
+
+  if (window_offscreen_) {
+    gbm_surface_destroy(static_cast<gbm_surface*>(window_offscreen_));
+    window_offscreen_ = nullptr;
+  }
+
   if (!CreateGbmSurface()) {
     return false;
   }
   return true;
 }
 
+void NativeWindowDrmGbm::OnPageFlip(int /*fd*/,
+                                    unsigned int /*frame*/,
+                                    unsigned int /*sec*/,
+                                    unsigned int /*usec*/,
+                                    void* data) {
+  auto* self = static_cast<NativeWindowDrmGbm*>(data);
+  self->flip_pending_ = false;
+}
+
+bool NativeWindowDrmGbm::WaitForPageFlip() {
+  if (!flip_pending_) {
+    return true;
+  }
+
+  drmEventContext ev = {};
+  ev.version = DRM_EVENT_CONTEXT_VERSION;
+  ev.page_flip_handler = &NativeWindowDrmGbm::OnPageFlip;
+
+  while (flip_pending_) {
+    pollfd pfd = {};
+    pfd.fd = drm_device_;
+    pfd.events = POLLIN;
+    int r = poll(&pfd, 1, 1000);
+    if (r < 0) {
+      if (errno == EINTR) {
+        continue;
+      }
+      ELINUX_LOG(ERROR) << "poll(drm_device_) failed: " << strerror(errno);
+      return false;
+    }
+    if (r == 0) {
+      ELINUX_LOG(ERROR) << "Timed out waiting for DRM page flip event";
+      return false;
+    }
+    if (pfd.revents & (POLLERR | POLLHUP | POLLNVAL)) {
+      ELINUX_LOG(ERROR) << "DRM fd error while waiting for page flip";
+      return false;
+    }
+    if (pfd.revents & POLLIN) {
+      if (drmHandleEvent(drm_device_, &ev) != 0) {
+        ELINUX_LOG(ERROR) << "drmHandleEvent failed: " << strerror(errno);
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+void NativeWindowDrmGbm::ReleaseRetiredBuffer() {
+  if (!bo_retired_) {
+    return;
+  }
+  drmModeRmFB(drm_device_, fb_retired_);
+  gbm_surface_release_buffer(static_cast<gbm_surface*>(window_), bo_retired_);
+  bo_retired_ = nullptr;
+  fb_retired_ = 0;
+}
+
 void NativeWindowDrmGbm::SwapBuffers() {
+  if (!drm_crtc_) {
+    ELINUX_LOG(ERROR) << "crtc is null, cannot present.";
+    return;
+  }
+
+  // Wait for the previous flip to complete and release the displaced buffer
+  // before locking a new front buffer (kmscube-style 2-BO lifecycle).
+  if (!WaitForPageFlip()) {
+    ELINUX_LOG(ERROR) << "Page flip wait failed; output is no longer usable.";
+    valid_ = false;
+    return;
+  }
+  ReleaseRetiredBuffer();
+
   auto* bo = gbm_surface_lock_front_buffer(static_cast<gbm_surface*>(window_));
+  if (!bo) {
+    ELINUX_LOG(ERROR) << "gbm_surface_lock_front_buffer failed";
+    return;
+  }
+
   auto width = gbm_bo_get_width(bo);
   auto height = gbm_bo_get_height(bo);
   auto handle = gbm_bo_get_handle(bo).u32;
   auto stride = gbm_bo_get_stride(bo);
-  uint32_t fb;
+  uint32_t fb = 0;
   int result =
       drmModeAddFB(drm_device_, width, height, 24, 32, stride, handle, &fb);
   if (result != 0) {
     ELINUX_LOG(ERROR) << "Failed to add a framebuffer. (" << result << ")";
+    gbm_surface_release_buffer(static_cast<gbm_surface*>(window_), bo);
+    return;
   }
-  if (!drm_crtc_) {
-    ELINUX_LOG(ERROR) << "crtc is null, cannot set mode.";
-  } else {
+
+  if (!modeset_done_) {
+    // First scanout from this surface: SetCrtc to take over the panel.
     result = drmModeSetCrtc(drm_device_, drm_crtc_->crtc_id, fb, 0, 0,
                             &drm_connector_id_, 1, &drm_mode_info_);
     if (result != 0) {
-      ELINUX_LOG(ERROR) << "Failed to set crct mode. (" << result << ")";
+      ELINUX_LOG(ERROR) << "drmModeSetCrtc failed. (" << result << ")";
+      drmModeRmFB(drm_device_, fb);
+      gbm_surface_release_buffer(static_cast<gbm_surface*>(window_), bo);
+      return;
     }
+    modeset_done_ = true;
+    bo_in_kernel_ = bo;
+    fb_in_kernel_ = fb;
+    return;
   }
 
-  if (gbm_previous_bo_) {
-    drmModeRmFB(drm_device_, gbm_previous_fb_);
-    gbm_surface_release_buffer(static_cast<gbm_surface*>(window_),
-                               gbm_previous_bo_);
+  if (enable_vsync_) {
+    flip_pending_ = true;
+    result = drmModePageFlip(drm_device_, drm_crtc_->crtc_id, fb,
+                             DRM_MODE_PAGE_FLIP_EVENT, this);
+    if (result != 0) {
+      ELINUX_LOG(ERROR) << "drmModePageFlip failed (" << result << " / "
+                        << strerror(-result) << "); falling back to SetCrtc.";
+      flip_pending_ = false;
+
+      result = drmModeSetCrtc(drm_device_, drm_crtc_->crtc_id, fb, 0, 0,
+                              &drm_connector_id_, 1, &drm_mode_info_);
+      if (result != 0) {
+        ELINUX_LOG(ERROR) << "drmModeSetCrtc fallback failed. (" << result
+                          << ")";
+        drmModeRmFB(drm_device_, fb);
+        gbm_surface_release_buffer(static_cast<gbm_surface*>(window_), bo);
+        return;
+      }
+      // Synchronous SetCrtc displaced bo_in_kernel_ immediately.
+      drmModeRmFB(drm_device_, fb_in_kernel_);
+      gbm_surface_release_buffer(static_cast<gbm_surface*>(window_),
+                                 bo_in_kernel_);
+    } else {
+      // Flip queued successfully — the previous scanout buffer will be
+      // released once the flip event fires and we drain it next frame.
+      bo_retired_ = bo_in_kernel_;
+      fb_retired_ = fb_in_kernel_;
+    }
+
+    bo_in_kernel_ = bo;
+    fb_in_kernel_ = fb;
+    return;
   }
-  gbm_previous_bo_ = bo;
-  gbm_previous_fb_ = fb;
+
+  // Vsync explicitly disabled: legacy synchronous SetCrtc per frame. Retains
+  // pre-existing (tearing) behavior for users who opt out.
+  result = drmModeSetCrtc(drm_device_, drm_crtc_->crtc_id, fb, 0, 0,
+                          &drm_connector_id_, 1, &drm_mode_info_);
+  if (result != 0) {
+    ELINUX_LOG(ERROR) << "drmModeSetCrtc failed. (" << result << ")";
+    drmModeRmFB(drm_device_, fb);
+    gbm_surface_release_buffer(static_cast<gbm_surface*>(window_), bo);
+    return;
+  }
+  drmModeRmFB(drm_device_, fb_in_kernel_);
+  gbm_surface_release_buffer(static_cast<gbm_surface*>(window_), bo_in_kernel_);
+  bo_in_kernel_ = bo;
+  fb_in_kernel_ = fb;
 }
 
 bool NativeWindowDrmGbm::CreateGbmSurface() {
