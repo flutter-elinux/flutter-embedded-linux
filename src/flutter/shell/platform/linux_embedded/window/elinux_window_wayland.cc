@@ -1568,6 +1568,13 @@ void ELinuxWindowWayland::UpdateFlutterCursor(const std::string& cursor_name) {
 }
 
 std::string ELinuxWindowWayland::GetClipboardData() {
+  // If we own the data source, we can return the local data directly.
+  // This avoids a synchronous read() and prevents a deadlock when
+  // pasting data copied from this app.
+  if (wl_data_source_) {
+    return clipboard_data_;
+  }
+
   std::string str = "";
 
   if (wl_data_offer_) {
