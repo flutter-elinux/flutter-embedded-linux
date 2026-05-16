@@ -166,6 +166,16 @@ void ELinuxEGLSurface::PopulateExistingDamage(const intptr_t fbo_id,
 
   existing_damage->num_rects = 1;
 
+  // Free any previous allocation for this FBO. SwapBuffers normally frees the
+  // buffer after consuming it, but the engine may call populate again without
+  // a matching present_with_info (e.g. skipped frame or shutdown), which would
+  // otherwise orphan the prior malloc.
+  auto it = existing_damage_map_.find(fbo_id);
+  if (it != existing_damage_map_.end() && it->second != nullptr) {
+    free(it->second);
+    it->second = nullptr;
+  }
+
   // Allocate the array of rectangles for the existing damage.
   existing_damage_map_[fbo_id] = static_cast<FlutterRect*>(
       malloc(sizeof(FlutterRect) * existing_damage->num_rects));
