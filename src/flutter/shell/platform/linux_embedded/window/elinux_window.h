@@ -45,7 +45,7 @@ class ELinuxWindow {
   void NotifyDisplayInfoUpdates() const {
     if (binding_handler_delegate_) {
       binding_handler_delegate_->UpdateDisplayInfo(
-          std::trunc(1000000.0 / frame_rate_), GetCurrentWidth(),
+          static_cast<double>(frame_rate_) / 1000.0, GetCurrentWidth(),
           GetCurrentHeight(), current_scale_);
     }
   }
