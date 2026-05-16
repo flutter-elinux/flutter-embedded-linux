@@ -269,6 +269,7 @@ const wl_callback_listener ELinuxWindowWayland::kWlSurfaceFrameListener = {
           // by all compositors. This path is for when it wasn't supported.
           auto self = reinterpret_cast<ELinuxWindowWayland*>(data);
           if (self->wp_presentation_clk_id_ != UINT32_MAX) {
+            wl_callback_destroy(wl_callback);
             return;
           }
 
