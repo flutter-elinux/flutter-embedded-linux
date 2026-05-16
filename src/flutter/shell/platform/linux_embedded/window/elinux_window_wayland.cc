@@ -685,29 +685,39 @@ const wl_output_listener ELinuxWindowWayland::kWlOutputListener = {
           self->frame_rate_ = refresh;
         }
 
+        // wl_output reports physical pixels; the rest of the codebase tracks
+        // view_properties_ as logical DIP (physical_px == DIP * current_scale_)
+        // — convert once so the storage and clipping below share units, and
+        // the invariant view_properties_.width * current_scale_ == native_px
+        // holds consistently with xdg_toplevel_listener.configure.
+        const int32_t width_dip =
+            static_cast<int32_t>(width / self->current_scale_);
+        const int32_t height_dip =
+            static_cast<int32_t>(height / self->current_scale_);
+
         if (self->view_properties_.view_mode ==
             FlutterDesktopViewMode::kFullscreen) {
-          self->view_properties_.width = width;
-          self->view_properties_.height = height;
+          self->view_properties_.width = width_dip;
+          self->view_properties_.height = height_dip;
           self->request_redraw_ = true;
         }
 
-        if (self->view_properties_.width > width) {
+        if (self->view_properties_.width > width_dip) {
           ELINUX_LOG(WARNING)
               << "Requested width size(" << self->view_properties_.width << ") "
-              << "is larger than display size(" << width
+              << "is larger than display size(" << width_dip
               << ")"
                  ", clipping";
-          self->view_properties_.width = width;
+          self->view_properties_.width = width_dip;
           self->request_redraw_ = true;
         }
-        if (self->view_properties_.height > height) {
+        if (self->view_properties_.height > height_dip) {
           ELINUX_LOG(WARNING)
               << "Requested height size(" << self->view_properties_.height
-              << ") " << "is larger than display size(" << height
+              << ") " << "is larger than display size(" << height_dip
               << ")"
                  ", clipping";
-          self->view_properties_.height = height;
+          self->view_properties_.height = height_dip;
           self->request_redraw_ = true;
         }
       }
@@ -1388,8 +1398,17 @@ bool ELinuxWindowWayland::CreateRenderSurface(int32_t width_px,
   }
 
   if (view_properties_.view_mode == FlutterDesktopViewMode::kFullscreen) {
-    width_px = view_properties_.width * current_scale_;
-    height_px = view_properties_.height * current_scale_;
+    if (view_properties_.force_scale_factor && display_max_width_ > 0 &&
+        display_max_height_ > 0) {
+      // When force_scale_factor is active, the surface must be the native
+      // display resolution (display_max). Using display_max directly avoids
+      // floating-point rounding when current_scale_ is non-integer (e.g. 1.3).
+      width_px = display_max_width_;
+      height_px = display_max_height_;
+    } else {
+      width_px = view_properties_.width * current_scale_;
+      height_px = view_properties_.height * current_scale_;
+    }
   }
 
   ELINUX_LOG(TRACE) << "Created the Wayland surface: " << width_px << "x"
