@@ -22,7 +22,8 @@ class ELinuxEGLSurface {
   ELinuxEGLSurface(EGLSurface surface,
                    EGLDisplay display,
                    EGLContext context,
-                   bool vsync_enabled);
+                   bool vsync_enabled,
+                   bool dirty_region_management_enabled = true);
   ~ELinuxEGLSurface();
 
   bool IsValid() const;
@@ -47,6 +48,7 @@ class ELinuxEGLSurface {
   EGLSurface surface_;
   EGLContext context_;
   bool vsync_enabled_;
+  bool dirty_region_management_enabled_;
 
   size_t width_px_;
   size_t height_px_;

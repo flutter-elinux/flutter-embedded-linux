@@ -120,6 +120,13 @@ typedef struct {
   // True:  Sync to compositor redraw/v-blank  (eglSwapInterval 1)
   // False: Do not sync to compositor redraw/v-blank (eglSwapInterval 0)
   bool enable_vsync;
+
+  // Disable dirty region management (EGL partial update).
+  // Set true to always perform full-screen repaints and EGL full swaps.
+  // Workaround for GPU drivers that mishandle EGL_KHR_partial_update
+  // (e.g. iMX8MP / NXP Vivante). False by default (management enabled).
+  // See: https://github.com/sony/flutter-embedded-linux/issues/334
+  bool disable_dirty_region_management;
 } FlutterDesktopViewProperties;
 
 // ========== View Controller ==========

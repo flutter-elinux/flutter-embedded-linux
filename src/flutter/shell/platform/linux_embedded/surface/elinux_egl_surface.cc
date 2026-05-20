@@ -19,31 +19,35 @@ constexpr const int kMaxHistorySize = 10;
 ELinuxEGLSurface::ELinuxEGLSurface(EGLSurface surface,
                                    EGLDisplay display,
                                    EGLContext context,
-                                   bool vsync_enabled)
+                                   bool vsync_enabled,
+                                   bool dirty_region_management_enabled)
     : surface_(surface),
       display_(display),
       context_(context),
       vsync_enabled_(vsync_enabled),
+      dirty_region_management_enabled_(dirty_region_management_enabled),
       width_px_(kInitialWindowWidthPx),
       height_px_(kInitialWindowHeightPx) {
-  const char* extensions = eglQueryString(display_, EGL_EXTENSIONS);
+  if (dirty_region_management_enabled_) {
+    const char* extensions = eglQueryString(display_, EGL_EXTENSIONS);
 
-  if (has_egl_extension(extensions, "EGL_KHR_partial_update")) {
-    eglSetDamageRegionKHR_ = reinterpret_cast<PFNEGLSETDAMAGEREGIONKHRPROC>(
-        eglGetProcAddress("eglSetDamageRegionKHR"));
-  }
+    if (has_egl_extension(extensions, "EGL_KHR_partial_update")) {
+      eglSetDamageRegionKHR_ = reinterpret_cast<PFNEGLSETDAMAGEREGIONKHRPROC>(
+          eglGetProcAddress("eglSetDamageRegionKHR"));
+    }
 
-  if (has_egl_extension(extensions, "EGL_EXT_swap_buffers_with_damage")) {
-    eglSwapBuffersWithDamageEXT_ =
-        reinterpret_cast<PFNEGLSWAPBUFFERSWITHDAMAGEEXTPROC>(
-            eglGetProcAddress("eglSwapBuffersWithDamageEXT"));
-  } else if (has_egl_extension(extensions,
-                               "EGL_KHR_swap_buffers_with_damage")) {
-    eglSwapBuffersWithDamageEXT_ =
-        reinterpret_cast<PFNEGLSWAPBUFFERSWITHDAMAGEEXTPROC>(
-            eglGetProcAddress("eglSwapBuffersWithDamageKHR"));
-  } else {
-    // do nothing.
+    if (has_egl_extension(extensions, "EGL_EXT_swap_buffers_with_damage")) {
+      eglSwapBuffersWithDamageEXT_ =
+          reinterpret_cast<PFNEGLSWAPBUFFERSWITHDAMAGEEXTPROC>(
+              eglGetProcAddress("eglSwapBuffersWithDamageEXT"));
+    } else if (has_egl_extension(extensions,
+                                 "EGL_KHR_swap_buffers_with_damage")) {
+      eglSwapBuffersWithDamageEXT_ =
+          reinterpret_cast<PFNEGLSWAPBUFFERSWITHDAMAGEEXTPROC>(
+              eglGetProcAddress("eglSwapBuffersWithDamageKHR"));
+    } else {
+      // do nothing.
+    }
   }
 };
 
@@ -128,9 +132,11 @@ bool ELinuxEGLSurface::SwapBuffers(const FlutterPresentInfo* info) {
   }
 
   // Add frame damage to damage history
-  damage_history_.push_back(info->frame_damage.damage[0]);
-  if (damage_history_.size() > kMaxHistorySize) {
-    damage_history_.pop_front();
+  if (dirty_region_management_enabled_) {
+    damage_history_.push_back(info->frame_damage.damage[0]);
+    if (damage_history_.size() > kMaxHistorySize) {
+      damage_history_.pop_front();
+    }
   }
 
   if (eglSwapBuffersWithDamageEXT_) {
@@ -155,15 +161,6 @@ bool ELinuxEGLSurface::SwapBuffers(const FlutterPresentInfo* info) {
 
 void ELinuxEGLSurface::PopulateExistingDamage(const intptr_t fbo_id,
                                               FlutterDamage* existing_damage) {
-  // Given the FBO age, create existing damage region by joining all frame
-  // damages since FBO was last used
-  EGLint age = 0;
-  if (eglQuerySurface(display_, surface_, EGL_BUFFER_AGE_EXT, &age) !=
-          EGL_TRUE ||
-      age == 0) {
-    age = 4;  // Virtually no driver should have a swapchain length > 4.
-  }
-
   existing_damage->num_rects = 1;
 
   // Free any previous allocation for this FBO. SwapBuffers normally frees the
@@ -183,6 +180,23 @@ void ELinuxEGLSurface::PopulateExistingDamage(const intptr_t fbo_id,
   existing_damage_map_[fbo_id][0] = FlutterRect{
       0, 0, static_cast<double>(width_px_), static_cast<double>(height_px_)};
   existing_damage->damage = existing_damage_map_[fbo_id];
+
+  if (!dirty_region_management_enabled_) {
+    // Dirty region management disabled: always report full-screen damage so
+    // the engine performs a full repaint. This is a workaround for GPU drivers
+    // that mishandle EGL_KHR_partial_update (e.g. iMX8MP / NXP Vivante).
+    // See: https://github.com/sony/flutter-embedded-linux/issues/334
+    return;
+  }
+
+  // Given the FBO age, create existing damage region by joining all frame
+  // damages since FBO was last used
+  EGLint age = 0;
+  if (eglQuerySurface(display_, surface_, EGL_BUFFER_AGE_EXT, &age) !=
+          EGL_TRUE ||
+      age == 0) {
+    age = 4;  // Virtually no driver should have a swapchain length > 4.
+  }
 
   if (age > 1) {
     --age;
