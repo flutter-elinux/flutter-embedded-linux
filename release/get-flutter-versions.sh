@@ -61,7 +61,7 @@ if [ -n "$CHANNEL" ]; then
 
 	# Get SDK version
 	"$BUILD_DIR/flutter/bin/flutter" channel "$CHANNEL"
-	"$BUILD_DIR/flutter/bin/flutter" upgrade
+	"$BUILD_DIR/flutter/bin/flutter" upgrade --force
 	"$BUILD_DIR/flutter/bin/flutter" --version > "$BUILD_DIR/sdk.version"
 	git -C "$BUILD_DIR/flutter" rev-parse HEAD > "$BUILD_DIR/flutter.version"
 	git -C "$BUILD_DIR/flutter" describe --tags >> "$BUILD_DIR/flutter.version"
@@ -76,7 +76,7 @@ elif [ -n "$FLUTTER_REV" ]; then
 	fi
 	git -C "$BUILD_DIR/flutter" checkout "$FLUTTER_REV"
 
-	echo "$FLUTTER_REV" > "$BUILD_DIR/flutter.version"
+	git -C "$BUILD_DIR/flutter" rev-parse HEAD > "$BUILD_DIR/flutter.version"
 	git -C "$BUILD_DIR/flutter" describe --tags >> "$BUILD_DIR/flutter.version"
 	cat "$BUILD_DIR/flutter/bin/internal/engine.version" > "$BUILD_DIR/embedder.version"
 	ENGINE_VERSION=$(cat "$BUILD_DIR/embedder.version")
