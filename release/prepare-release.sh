@@ -73,6 +73,17 @@ Rename dir:
 mv "$dir" output-$TAG
 EOF
 		fi
+		cat <<EOF
+Update flutter-elinux:
+==================
+cat > bin/internal/engine.version <<EOT
+$(cat embedder.version)
+EOT
+cat > bin/internal/flutter.version <<EOT
+$(cat flutter.version)
+EOT
+==================
+EOF
 	)
 }
 
