@@ -153,6 +153,10 @@ class FlutterELinuxEngine {
   // system changes.
   void SendSystemLocales();
 
+  // Writes a bundle-only fontconfig XML to a temp file and points
+  // FONTCONFIG_FILE at it; path stored in |fontconfig_override_path_|.
+  void InstallBundleFontConfig();
+
   // The handle to the embedder.h engine instance.
   FLUTTER_API_SYMBOL(FlutterEngine) engine_ = nullptr;
 
@@ -197,6 +201,10 @@ class FlutterELinuxEngine {
   std::unique_ptr<VsyncWaiter> vsync_waiter_;
 
   bool enable_impeller_ = false;
+
+  // Temp-file path of the installed fontconfig override; empty if none.
+  // Unlinked at shutdown. Must be a real path -- fontconfig reopens it.
+  std::string fontconfig_override_path_;
 } SWIFT_UNSAFE_REFERENCE;
 
 }  // namespace flutter

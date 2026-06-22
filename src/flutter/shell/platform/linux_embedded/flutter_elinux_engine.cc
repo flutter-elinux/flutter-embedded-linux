@@ -6,8 +6,16 @@
 
 #include <rapidjson/document.h>
 
+#include <stdlib.h>
+#include <unistd.h>
+
+#include <cerrno>
+#include <cstring>
+#include <fstream>
 #include <iostream>
+#include <set>
 #include <sstream>
+#include <vector>
 
 #include "flutter/shell/platform/common/client_wrapper/binary_messenger_impl.h"
 #include "flutter/shell/platform/common/client_wrapper/include/flutter/basic_message_channel.h"
@@ -168,6 +176,9 @@ FlutterELinuxEngine::FlutterELinuxEngine(const FlutterProjectBundle& project)
 
 FlutterELinuxEngine::~FlutterELinuxEngine() {
   Stop();
+  if (!fontconfig_override_path_.empty()) {
+    unlink(fontconfig_override_path_.c_str());
+  }
 }
 
 void FlutterELinuxEngine::SetSwitches(
@@ -179,6 +190,9 @@ bool FlutterELinuxEngine::RunWithEntrypoint(const char* entrypoint) {
   if (!project_->HasValidPaths()) {
     ELINUX_LOG(ERROR) << "Missing or unresolvable paths to assets.";
     return false;
+  }
+  if (project_->disable_system_fonts()) {
+    InstallBundleFontConfig();
   }
   std::string assets_path_string = project_->assets_path();
   std::string icu_path_string = project_->icu_path();
@@ -376,6 +390,109 @@ void FlutterELinuxEngine::HandlePlatformMessage(
 
 void FlutterELinuxEngine::ReloadSystemFonts() {
   embedder_api_.ReloadSystemFonts(engine_);
+}
+
+void FlutterELinuxEngine::InstallBundleFontConfig() {
+  const std::string& assets_path = project_->assets_path();
+  std::ifstream manifest_file(assets_path + "/FontManifest.json");
+  if (!manifest_file.is_open()) {
+    ELINUX_LOG(WARNING) << "disable_system_fonts requested but "
+                        << "FontManifest.json was not found in the bundle; "
+                        << "skipping fontconfig override.";
+    return;
+  }
+  std::stringstream buffer;
+  buffer << manifest_file.rdbuf();
+  rapidjson::Document doc;
+  doc.Parse(buffer.str().c_str());
+  if (doc.HasParseError() || !doc.IsArray()) {
+    ELINUX_LOG(WARNING) << "FontManifest.json is malformed; skipping "
+                        << "fontconfig override.";
+    return;
+  }
+
+  // Collect the unique parent directories of every bundled font asset, so a
+  // single <dir> entry covers each location even when families share dirs.
+  std::set<std::string> font_dirs;
+  for (const auto& family : doc.GetArray()) {
+    if (!family.IsObject() || !family.HasMember("fonts")) {
+      continue;
+    }
+    const auto& fonts = family["fonts"];
+    if (!fonts.IsArray()) {
+      continue;
+    }
+    for (const auto& font : fonts.GetArray()) {
+      if (!font.IsObject() || !font.HasMember("asset")) {
+        continue;
+      }
+      const auto& asset = font["asset"];
+      if (!asset.IsString()) {
+        continue;
+      }
+      std::string full = assets_path + "/" + asset.GetString();
+      auto slash = full.find_last_of('/');
+      if (slash != std::string::npos) {
+        font_dirs.insert(full.substr(0, slash));
+      }
+    }
+  }
+
+  if (font_dirs.empty()) {
+    ELINUX_LOG(WARNING) << "FontManifest.json declared no font assets; "
+                        << "skipping fontconfig override (would leave the app "
+                        << "with no fonts at all).";
+    return;
+  }
+
+  // Build a private fontconfig XML that lists only the bundle's font
+  // directories. Without any <dir>/usr/share/fonts</dir> entries, the engine's
+  // Skia sees no system fonts and renders missing glyphs as tofu rather than
+  // falling back to a system typeface. No <cachedir> is emitted: fontconfig
+  // rebuilds the (tiny) bundle index in memory on each startup, which avoids
+  // assumptions about a writable HOME — important on embedded targets where
+  // e.g. /root may be read-only.
+  std::stringstream xml;
+  xml << "<?xml version=\"1.0\"?>\n"
+      << "<!DOCTYPE fontconfig SYSTEM \"fonts.dtd\">\n"
+      << "<fontconfig>\n";
+  for (const auto& dir : font_dirs) {
+    xml << "  <dir>" << dir << "</dir>\n";
+  }
+  xml << "</fontconfig>\n";
+
+  // Real file (not memfd) because fontconfig reopens the path during init;
+  // tmpfs under $XDG_RUNTIME_DIR or /tmp, unlinked in the destructor.
+  const char* runtime_dir = std::getenv("XDG_RUNTIME_DIR");
+  std::string tmpl = (runtime_dir && runtime_dir[0]) ? runtime_dir : "/tmp";
+  tmpl += "/flutter-elinux-fontconfig.XXXXXX";
+  std::vector<char> tmpl_buf(tmpl.begin(), tmpl.end());
+  tmpl_buf.push_back('\0');
+  int fd = mkstemp(tmpl_buf.data());
+  if (fd < 0) {
+    ELINUX_LOG(ERROR) << "mkstemp(" << tmpl_buf.data()
+                      << ") failed: " << strerror(errno);
+    return;
+  }
+  const std::string data = xml.str();
+  ssize_t written = write(fd, data.data(), data.size());
+  close(fd);
+  if (written != static_cast<ssize_t>(data.size())) {
+    ELINUX_LOG(ERROR) << "Short write to fontconfig file " << tmpl_buf.data();
+    unlink(tmpl_buf.data());
+    return;
+  }
+
+  std::string path(tmpl_buf.data());
+  if (setenv("FONTCONFIG_FILE", path.c_str(), /*overwrite=*/1) != 0) {
+    ELINUX_LOG(ERROR) << "Failed to set FONTCONFIG_FILE: " << strerror(errno);
+    unlink(path.c_str());
+    return;
+  }
+  fontconfig_override_path_ = std::move(path);
+  ELINUX_LOG(INFO) << "Bundle-only fontconfig installed at "
+                   << fontconfig_override_path_ << " (" << font_dirs.size()
+                   << " font dir(s)).";
 }
 
 void FlutterELinuxEngine::SetSystemSettings(float text_scaling_factor,

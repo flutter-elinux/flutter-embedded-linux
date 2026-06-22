@@ -41,6 +41,13 @@ class DartProject {
     return dart_entrypoint_arguments_;
   }
 
+  // If true, the engine will install a private fontconfig containing only
+  // the bundle's fonts and ignore system fonts.
+  void set_disable_system_fonts(bool disable) {
+    disable_system_fonts_ = disable;
+  }
+  bool disable_system_fonts() const { return disable_system_fonts_; }
+
  private:
   // Accessors for internals are private, so that they can be changed if more
   // flexible options for project structures are needed later without it
@@ -63,6 +70,8 @@ class DartProject {
   std::wstring aot_library_path_;
   // The list of arguments to pass through to the Dart entrypoint.
   std::vector<std::string> dart_entrypoint_arguments_;
+  // Whether the engine should install a bundle-only fontconfig.
+  bool disable_system_fonts_ = false;
 };
 
 }  // namespace flutter
