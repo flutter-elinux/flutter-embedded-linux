@@ -74,24 +74,24 @@ bool ELinuxEGLSurface::MakeCurrent() const {
     return false;
   }
 
-  // Non-blocking when swappipping buffers on Wayland.
-  // OpenGL swap intervals can be used to prevent screen tearing.
-  // If enabled, the raster thread blocks until the v-blank.
-  // This is unnecessary if DWM composition is enabled.
-  // See: https://www.khronos.org/opengl/wiki/Swap_Interval
-  // See: https://learn.microsoft.com/windows/win32/dwm/composition-ovw
+  // Always set swap interval to 0 (non-blocking eglSwapBuffers).
   //
-  // However, we might encounter rendering problems on some Wayland compositors
-  // (e.g. weston 9.0).
+  // On DRM/GBM backends, vsync is handled explicitly via drmModePageFlip
+  // in NativeWindowDrmGbm::SwapBuffers, so EGL must not also attempt to
+  // throttle — double-synchronization can cause timing mismatches that
+  // manifest as tearing.
+  //
+  // On Wayland, the compositor handles presentation timing, so EGL
+  // throttling is also unnecessary (and can cause rendering problems
+  // with some compositors, e.g. weston 9.0).
+  //
   // See also:
   //   - https://github.com/sony/flutter-embedded-linux/issues/230
   //   - https://github.com/sony/flutter-embedded-linux/issues/234
   //   - https://github.com/sony/flutter-embedded-linux/issues/220
-  if (!vsync_enabled_) {
-    if (eglSwapInterval(display_, 0) != EGL_TRUE) {
-      ELINUX_LOG(ERROR) << "Failed to eglSwapInterval(Free): "
-                        << get_egl_error_cause();
-    }
+  if (eglSwapInterval(display_, 0) != EGL_TRUE) {
+    ELINUX_LOG(ERROR) << "Failed to eglSwapInterval(0): "
+                      << get_egl_error_cause();
   }
 
   return true;
