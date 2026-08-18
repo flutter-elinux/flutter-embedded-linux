@@ -183,6 +183,7 @@ class ELinuxWindowDrm : public ELinuxWindow, public WindowBindingHandler {
 
       device_found = true;
       ELINUX_LOG(INFO) << devices[i] << " was selected as the DRM device.";
+      break;
     }
     if (!device_found) {
       return false;
