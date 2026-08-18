@@ -17,6 +17,8 @@
 #endif
 
 #include <chrono>
+#include <climits>
+#include <cstdlib>
 #include <cstring>
 #include <memory>
 #include <optional>
@@ -303,14 +305,23 @@ class ELinuxWindowDrm : public ELinuxWindow, public WindowBindingHandler {
 
     constexpr char kFileNameSeparator[] = "/";
     if (device_filename != "drm-nvdc") {
-      auto pos = device_filename.find_last_of(kFileNameSeparator);
+      char resolved_path[PATH_MAX];
+      if (!realpath(device_filename.c_str(), resolved_path)) {
+        ELINUX_LOG(ERROR) << "Failed to resolve device path "
+                          << device_filename;
+        udev_unref(udev);
+        return false;
+      }
+
+      auto resolved = std::string(resolved_path);
+      auto pos = resolved.find_last_of(kFileNameSeparator);
       if (pos == std::string::npos) {
         ELINUX_LOG(ERROR) << "Failed to get device name position.";
         udev_unref(udev);
         return false;
       }
 
-      auto device_name = device_filename.substr(pos + 1);
+      auto device_name = resolved.substr(pos + 1);
       auto device = udev_device_new_from_subsystem_sysname(
           udev, kUdevMonitorSubsystemDrm, device_name.c_str());
       if (!device) {
