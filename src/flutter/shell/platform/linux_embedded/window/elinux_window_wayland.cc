@@ -531,9 +531,12 @@ const wl_touch_listener ELinuxWindowWayland::kWlTouchListener = {
       auto self = reinterpret_cast<ELinuxWindowWayland*>(data);
       self->serial_ = serial;
       if (self->binding_handler_delegate_) {
-        double x = wl_fixed_to_double(surface_x);
-        double y = wl_fixed_to_double(surface_y);
-        self->binding_handler_delegate_->OnTouchDown(time, id, x, y);
+        // wl_touch reports surface-local (logical) coordinates, whereas the
+        // engine expects physical pixels. Convert them the same way the
+        // wl_pointer handlers do.
+        double x_px = wl_fixed_to_double(surface_x) * self->current_scale_;
+        double y_px = wl_fixed_to_double(surface_y) * self->current_scale_;
+        self->binding_handler_delegate_->OnTouchDown(time, id, x_px, y_px);
       }
     },
     .up = [](void* data,
@@ -559,9 +562,10 @@ const wl_touch_listener ELinuxWindowWayland::kWlTouchListener = {
 
       auto self = reinterpret_cast<ELinuxWindowWayland*>(data);
       if (self->binding_handler_delegate_) {
-        double x = wl_fixed_to_double(surface_x);
-        double y = wl_fixed_to_double(surface_y);
-        self->binding_handler_delegate_->OnTouchMotion(time, id, x, y);
+        // See the comment in wl_touch_listener.down.
+        double x_px = wl_fixed_to_double(surface_x) * self->current_scale_;
+        double y_px = wl_fixed_to_double(surface_y) * self->current_scale_;
+        self->binding_handler_delegate_->OnTouchMotion(time, id, x_px, y_px);
       }
     },
     .frame = [](void* data, wl_touch* wl_touch) -> void {},
