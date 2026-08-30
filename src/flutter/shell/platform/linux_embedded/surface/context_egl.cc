@@ -88,7 +88,13 @@ ContextEgl::ContextEgl(std::unique_ptr<EnvironmentEgl> environment,
   }
 
   {
-    const EGLint attribs[] = {EGL_CONTEXT_CLIENT_VERSION, 2, EGL_NONE};
+#if defined(USE_GLES3)
+    constexpr EGLint kClientVersion = 3;
+#else
+    constexpr EGLint kClientVersion = 2;
+#endif
+    const EGLint attribs[] = {EGL_CONTEXT_CLIENT_VERSION, kClientVersion,
+                              EGL_NONE};
     context_ = eglCreateContext(environment_->Display(), config_,
                                 EGL_NO_CONTEXT, attribs);
     if (context_ == EGL_NO_CONTEXT) {
