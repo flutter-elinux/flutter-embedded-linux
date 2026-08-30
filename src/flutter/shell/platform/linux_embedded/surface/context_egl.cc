@@ -31,6 +31,7 @@ ContextEgl::ContextEgl(std::unique_ptr<EnvironmentEgl> environment,
   };
   const EGLint impeller_config_attributes[] = {
       // clang-format off
+    EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT,
     EGL_RED_SIZE,        8,
     EGL_GREEN_SIZE,      8,
     EGL_BLUE_SIZE,       8,
@@ -46,6 +47,7 @@ ContextEgl::ContextEgl(std::unique_ptr<EnvironmentEgl> environment,
   };
   const EGLint impeller_config_attributes_no_msaa[] = {
       // clang-format off
+    EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT,
     EGL_RED_SIZE,        8,
     EGL_GREEN_SIZE,      8,
     EGL_BLUE_SIZE,       8,
@@ -88,10 +90,16 @@ ContextEgl::ContextEgl(std::unique_ptr<EnvironmentEgl> environment,
   }
 
   {
+    // Impeller requires GLES3
 #if defined(USE_GLES3)
     constexpr EGLint kClientVersion = 3;
 #else
     constexpr EGLint kClientVersion = 2;
+    if (enable_impeller) {
+      ELINUX_LOG(ERROR)
+          << "Impeller requires GLES3; rebuild with USE_GLES3=ON";
+      return;
+    }
 #endif
     const EGLint attribs[] = {EGL_CONTEXT_CLIENT_VERSION, kClientVersion,
                               EGL_NONE};
