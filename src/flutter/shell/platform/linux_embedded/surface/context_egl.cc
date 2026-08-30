@@ -37,7 +37,7 @@ ContextEgl::ContextEgl(std::unique_ptr<EnvironmentEgl> environment,
 #if defined(ENABLE_EGL_ALPHA_COMPONENT_OF_COLOR_BUFFER)
     EGL_ALPHA_SIZE,      8,
 #endif
-    EGL_DEPTH_SIZE,      0,
+    EGL_DEPTH_SIZE,      24,  // Required for Impeller depth-order draws
     EGL_STENCIL_SIZE,    8,
     EGL_SAMPLE_BUFFERS,  1,
     EGL_SAMPLES,         4,
@@ -52,7 +52,7 @@ ContextEgl::ContextEgl(std::unique_ptr<EnvironmentEgl> environment,
 #if defined(ENABLE_EGL_ALPHA_COMPONENT_OF_COLOR_BUFFER)
     EGL_ALPHA_SIZE,      8,
 #endif
-    EGL_DEPTH_SIZE,      0,
+    EGL_DEPTH_SIZE,      24,  // Required for Impeller depth-order draws
     EGL_STENCIL_SIZE,    8,
     EGL_NONE
       // clang-format on
