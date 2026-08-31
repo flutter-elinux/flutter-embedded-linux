@@ -144,12 +144,11 @@ FlutterELinuxEngine::FlutterELinuxEngine(const FlutterProjectBundle& project)
 
   // Check for impeller support.
   auto& switches = project_->GetSwitches();
-  enable_impeller_ =
-      std::find_if(switches.begin(), switches.end(),
-                   [](const std::string& arg) {
-                     return arg == "--enable-impeller" ||
-                            arg == "--enable-impeller=true";
-                   }) != switches.end();
+  enable_impeller_ = std::find_if(switches.begin(), switches.end(),
+                                  [](const std::string& arg) {
+                                    return arg == "--enable-impeller" ||
+                                           arg == "--enable-impeller=true";
+                                  }) != switches.end();
 
   // Set up the legacy structs backing the API handles.
   messenger_ = FlutterDesktopMessengerReferenceOwner(

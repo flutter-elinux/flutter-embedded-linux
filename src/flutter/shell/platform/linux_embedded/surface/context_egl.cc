@@ -96,8 +96,7 @@ ContextEgl::ContextEgl(std::unique_ptr<EnvironmentEgl> environment,
 #else
     constexpr EGLint kClientVersion = 2;
     if (enable_impeller) {
-      ELINUX_LOG(ERROR)
-          << "Impeller requires GLES3; rebuild with USE_GLES3=ON";
+      ELINUX_LOG(ERROR) << "Impeller requires GLES3; rebuild with USE_GLES3=ON";
       return;
     }
 #endif
