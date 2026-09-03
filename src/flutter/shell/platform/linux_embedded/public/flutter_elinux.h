@@ -117,7 +117,8 @@ typedef struct {
   double scale_factor;
 
   // Enable Vsync.
-  // True:  Sync to compositor redraw/v-blank  (eglSwapInterval 1)
+  // True:  Sync to compositor redraw/v-blank  (eglSwapInterval 1, or a
+  //        vsynced page flip on DRM-GBM)
   // False: Do not sync to compositor redraw/v-blank (eglSwapInterval 0)
   bool enable_vsync;
 } FlutterDesktopViewProperties;
