@@ -53,6 +53,12 @@ class FlutterEngine : public PluginRegistry {
   // last return value from this function.
   std::chrono::nanoseconds ProcessMessages();
 
+  // Sets a callback that decides whether the calling thread is running platform
+  // tasks. See FlutterDesktopEngineSetRunsTasksOnCurrentThreadCallback.
+  void SetRunsTasksOnCurrentThreadCallback(
+      FlutterDesktopRunsTasksOnCurrentThreadCallback callback,
+      void* user_data);
+
   // Tells the engine that the system font list has changed. Should be called
   // by clients when OS-level font changes happen (e.g., WM_FONTCHANGE in a
   // Win32 application).

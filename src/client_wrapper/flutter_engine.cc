@@ -68,6 +68,13 @@ std::chrono::nanoseconds FlutterEngine::ProcessMessages() {
   return std::chrono::nanoseconds(FlutterDesktopEngineProcessMessages(engine_));
 }
 
+void FlutterEngine::SetRunsTasksOnCurrentThreadCallback(
+    FlutterDesktopRunsTasksOnCurrentThreadCallback callback,
+    void* user_data) {
+  FlutterDesktopEngineSetRunsTasksOnCurrentThreadCallback(engine_, callback,
+                                                          user_data);
+}
+
 void FlutterEngine::ReloadSystemFonts() {
   FlutterDesktopEngineReloadSystemFonts(engine_);
 }
