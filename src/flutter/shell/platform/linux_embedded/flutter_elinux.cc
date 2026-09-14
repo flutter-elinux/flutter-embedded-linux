@@ -71,6 +71,19 @@ uint64_t FlutterDesktopEngineProcessMessages(FlutterDesktopEngineRef engine) {
       .count();
 }
 
+void FlutterDesktopEngineSetTaskPostedCallback(
+    FlutterDesktopEngineRef engine,
+    FlutterDesktopTaskPostedCallback callback,
+    void* user_data) {
+  auto task_runner = EngineFromHandle(engine)->task_runner();
+  if (callback) {
+    task_runner->SetTaskPostedCallback(
+        [callback, user_data]() { callback(user_data); });
+  } else {
+    task_runner->SetTaskPostedCallback(nullptr);
+  }
+}
+
 FlutterDesktopViewControllerRef FlutterDesktopViewControllerCreate(
     const FlutterDesktopViewProperties* view_properties,
     FlutterDesktopEngineRef engine) {
@@ -135,6 +148,10 @@ bool FlutterDesktopViewDispatchEvent(FlutterDesktopViewRef view) {
 
 int32_t FlutterDesktopViewGetFrameRate(FlutterDesktopViewRef view) {
   return ViewFromHandle(view)->GetFrameRate();
+}
+
+int FlutterDesktopViewGetEventFd(FlutterDesktopViewRef view) {
+  return ViewFromHandle(view)->GetEventFd();
 }
 
 FlutterDesktopEngineRef FlutterDesktopEngineCreate(

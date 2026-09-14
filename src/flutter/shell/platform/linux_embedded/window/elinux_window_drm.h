@@ -149,6 +149,20 @@ class ELinuxWindowDrm : public ELinuxWindow, public WindowBindingHandler {
   }
 
   // |FlutterWindowBindingHandler|
+  int GetEventFd() override {
+#ifdef USE_LIBSYSTEMD
+    // udev DRM events are still serviced by periodic DispatchEvent calls.
+    if (!libinput_event_loop_) {
+      return -1;
+    }
+    auto fd = sd_event_get_fd(libinput_event_loop_);
+    return fd < 0 ? -1 : fd;
+#else
+    return uv_backend_fd(&main_loop_);
+#endif
+  }
+
+  // |FlutterWindowBindingHandler|
   bool CreateRenderSurface(int32_t width,
                            int32_t height,
                            bool enable_impeller) override {
@@ -818,7 +832,7 @@ class ELinuxWindowDrm : public ELinuxWindow, public WindowBindingHandler {
   std::optional<int> drm_device_id_;
 
 #ifdef USE_LIBSYSTEMD
-  sd_event* libinput_event_loop_;
+  sd_event* libinput_event_loop_ = nullptr;
   sd_event* udev_drm_event_loop_ = nullptr;
 #else
   uv_loop_t main_loop_;

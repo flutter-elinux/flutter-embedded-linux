@@ -25,6 +25,7 @@ class TaskRunner {
   using TaskTimePoint = std::chrono::steady_clock::time_point;
   using TaskExpiredCallback = std::function<void(const FlutterTask*)>;
   using TaskClosure = std::function<void()>;
+  using TaskPostedCallback = std::function<void()>;
 
   TaskRunner(std::thread::id main_thread_id,
              CurrentTimeProc get_current_time,
@@ -33,6 +34,9 @@ class TaskRunner {
 
   // Returns if the current thread is the UI thread.
   bool RunsTasksOnCurrentThread() const;
+
+  // Sets a callback invoked on the posting thread whenever a task is posted.
+  void SetTaskPostedCallback(TaskPostedCallback callback);
 
   // Post a Flutter engine task to the event loop for delayed execution.
   void PostFlutterTask(FlutterTask flutter_task,
@@ -84,6 +88,7 @@ class TaskRunner {
   TaskExpiredCallback on_task_expired_;
   std::mutex task_queue_mutex_;
   std::priority_queue<Task, std::deque<Task>, Task::Comparer> task_queue_;
+  TaskPostedCallback on_task_posted_;
 };
 
 }  // namespace flutter

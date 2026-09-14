@@ -21,6 +21,11 @@ bool TaskRunner::RunsTasksOnCurrentThread() const {
   return std::this_thread::get_id() == main_thread_id_;
 }
 
+void TaskRunner::SetTaskPostedCallback(TaskPostedCallback callback) {
+  std::lock_guard<std::mutex> lock(task_queue_mutex_);
+  on_task_posted_ = std::move(callback);
+}
+
 void TaskRunner::PostFlutterTask(FlutterTask flutter_task,
                                  uint64_t flutter_target_time_nanos) {
   Task task;
@@ -41,8 +46,17 @@ void TaskRunner::EnqueueTask(Task task) {
 
   task.order = ++sGlobalTaskOrder;
 
-  std::lock_guard<std::mutex> lock(task_queue_mutex_);
-  task_queue_.push(task);
+  TaskPostedCallback on_task_posted;
+  {
+    std::lock_guard<std::mutex> lock(task_queue_mutex_);
+    task_queue_.push(task);
+    on_task_posted = on_task_posted_;
+  }
+
+  // Invoke without holding the lock, so the callback may re-enter.
+  if (on_task_posted) {
+    on_task_posted();
+  }
 }
 
 std::chrono::nanoseconds TaskRunner::ProcessTasks() {

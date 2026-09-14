@@ -71,6 +71,10 @@ class FlutterELinuxView : public WindowBindingHandlerDelegate {
   // Returns the frame rate of the display.
   int32_t GetFrameRate();
 
+  // Returns a file descriptor that becomes readable when DispatchEvent has
+  // native events to process, or -1 if not supported.
+  int GetEventFd();
+
   // Callbacks for clearing context, settings context and swapping buffers.
   void* ProcResolver(const char* name);
   bool MakeCurrent();
