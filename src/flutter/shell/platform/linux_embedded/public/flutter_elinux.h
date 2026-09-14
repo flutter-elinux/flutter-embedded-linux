@@ -226,6 +226,24 @@ FLUTTER_EXPORT void FlutterDesktopEngineSetTaskPostedCallback(
     FlutterDesktopTaskPostedCallback callback,
     void* user_data);
 
+// Callback returning whether the calling thread is running platform tasks.
+typedef bool (*FlutterDesktopRunsTasksOnCurrentThreadCallback)(
+    void* /* user data */);
+
+// Sets a callback that decides whether the calling thread is currently running
+// the engine's platform tasks, or restores the default if |callback| is null.
+//
+// By default this compares against the thread that created the engine. A host
+// that calls FlutterDesktopEngineProcessMessages from a serial queue that is
+// not bound to a single thread, such as the libdispatch main queue after
+// dispatch_main(), can supply a queue-based check instead. The callback may be
+// invoked from any thread, must be thread-safe and fast, and must not call back
+// into the engine. |user_data| must remain valid until the engine is destroyed.
+FLUTTER_EXPORT void FlutterDesktopEngineSetRunsTasksOnCurrentThreadCallback(
+    FlutterDesktopEngineRef engine,
+    FlutterDesktopRunsTasksOnCurrentThreadCallback callback,
+    void* user_data);
+
 FLUTTER_EXPORT void FlutterDesktopEngineReloadSystemFonts(
     FlutterDesktopEngineRef engine);
 

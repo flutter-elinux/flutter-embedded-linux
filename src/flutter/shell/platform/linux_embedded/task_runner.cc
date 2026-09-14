@@ -18,7 +18,21 @@ TaskRunner::TaskRunner(std::thread::id main_thread_id,
       on_task_expired_(std::move(on_task_expired)) {}
 
 bool TaskRunner::RunsTasksOnCurrentThread() const {
+  RunsTasksOnCurrentThreadCallback runs_tasks_on_current_thread;
+  {
+    std::lock_guard<std::mutex> lock(runs_tasks_on_current_thread_mutex_);
+    runs_tasks_on_current_thread = runs_tasks_on_current_thread_;
+  }
+  if (runs_tasks_on_current_thread) {
+    return runs_tasks_on_current_thread();
+  }
   return std::this_thread::get_id() == main_thread_id_;
+}
+
+void TaskRunner::SetRunsTasksOnCurrentThreadCallback(
+    RunsTasksOnCurrentThreadCallback callback) {
+  std::lock_guard<std::mutex> lock(runs_tasks_on_current_thread_mutex_);
+  runs_tasks_on_current_thread_ = std::move(callback);
 }
 
 void TaskRunner::SetTaskPostedCallback(TaskPostedCallback callback) {
