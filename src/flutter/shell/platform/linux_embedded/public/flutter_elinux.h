@@ -165,6 +165,15 @@ FLUTTER_EXPORT bool FlutterDesktopViewDispatchEvent(FlutterDesktopViewRef view);
 FLUTTER_EXPORT int32_t
 FlutterDesktopViewGetFrameRate(FlutterDesktopViewRef view);
 
+// Returns a file descriptor that becomes readable when native events are
+// pending for FlutterDesktopViewDispatchEvent, or -1 if the backend does not
+// provide one. The descriptor is owned by the view and must not be closed.
+//
+// This lets a runloop dispatch input as soon as it arrives. It is a wakeup
+// hint only: FlutterDesktopViewDispatchEvent must still be called every frame,
+// as some backends (e.g. Wayland) also deliver vsync from it.
+FLUTTER_EXPORT int FlutterDesktopViewGetEventFd(FlutterDesktopViewRef view);
+
 // ========== Engine ==========
 
 // Creates a Flutter engine with the given properties.
@@ -200,6 +209,22 @@ FLUTTER_EXPORT bool FlutterDesktopEngineRun(FlutterDesktopEngineRef engine,
 // last return value from this function.
 FLUTTER_EXPORT uint64_t
 FlutterDesktopEngineProcessMessages(FlutterDesktopEngineRef engine);
+
+// Callback invoked when a task is posted to the platform task runner.
+typedef void (*FlutterDesktopTaskPostedCallback)(void* /* user data */);
+
+// Sets a callback invoked whenever a task is posted to the engine's platform
+// task runner, or clears it if |callback| is null.
+//
+// This lets a runloop call FlutterDesktopEngineProcessMessages as soon as work
+// arrives, rather than on its next periodic iteration. The callback runs on the
+// posting thread, which may be any thread including the platform thread, and
+// must not call back into the engine. |user_data| must remain valid until the
+// engine is destroyed.
+FLUTTER_EXPORT void FlutterDesktopEngineSetTaskPostedCallback(
+    FlutterDesktopEngineRef engine,
+    FlutterDesktopTaskPostedCallback callback,
+    void* user_data);
 
 FLUTTER_EXPORT void FlutterDesktopEngineReloadSystemFonts(
     FlutterDesktopEngineRef engine);
