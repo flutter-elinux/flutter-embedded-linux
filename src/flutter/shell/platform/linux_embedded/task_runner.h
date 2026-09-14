@@ -26,7 +26,6 @@ class TaskRunner {
   using TaskExpiredCallback = std::function<void(const FlutterTask*)>;
   using TaskClosure = std::function<void()>;
   using TaskPostedCallback = std::function<void()>;
-  using RunsTasksOnCurrentThreadCallback = std::function<bool()>;
 
   TaskRunner(std::thread::id main_thread_id,
              CurrentTimeProc get_current_time,
@@ -38,11 +37,6 @@ class TaskRunner {
 
   // Sets a callback invoked on the posting thread whenever a task is posted.
   void SetTaskPostedCallback(TaskPostedCallback callback);
-
-  // Overrides the RunsTasksOnCurrentThread thread check, e.g. with a check for
-  // a serial queue that is not bound to a single thread.
-  void SetRunsTasksOnCurrentThreadCallback(
-      RunsTasksOnCurrentThreadCallback callback);
 
   // Post a Flutter engine task to the event loop for delayed execution.
   void PostFlutterTask(FlutterTask flutter_task,
@@ -95,8 +89,6 @@ class TaskRunner {
   std::mutex task_queue_mutex_;
   std::priority_queue<Task, std::deque<Task>, Task::Comparer> task_queue_;
   TaskPostedCallback on_task_posted_;
-  mutable std::mutex runs_tasks_on_current_thread_mutex_;
-  RunsTasksOnCurrentThreadCallback runs_tasks_on_current_thread_;
 };
 
 }  // namespace flutter

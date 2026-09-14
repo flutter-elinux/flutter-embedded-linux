@@ -74,13 +74,6 @@ void FlutterEngine::SetTaskPostedCallback(
   FlutterDesktopEngineSetTaskPostedCallback(engine_, callback, user_data);
 }
 
-void FlutterEngine::SetRunsTasksOnCurrentThreadCallback(
-    FlutterDesktopRunsTasksOnCurrentThreadCallback callback,
-    void* user_data) {
-  FlutterDesktopEngineSetRunsTasksOnCurrentThreadCallback(engine_, callback,
-                                                          user_data);
-}
-
 void FlutterEngine::ReloadSystemFonts() {
   FlutterDesktopEngineReloadSystemFonts(engine_);
 }

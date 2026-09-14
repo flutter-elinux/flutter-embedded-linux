@@ -84,19 +84,6 @@ void FlutterDesktopEngineSetTaskPostedCallback(
   }
 }
 
-void FlutterDesktopEngineSetRunsTasksOnCurrentThreadCallback(
-    FlutterDesktopEngineRef engine,
-    FlutterDesktopRunsTasksOnCurrentThreadCallback callback,
-    void* user_data) {
-  auto task_runner = EngineFromHandle(engine)->task_runner();
-  if (callback) {
-    task_runner->SetRunsTasksOnCurrentThreadCallback(
-        [callback, user_data]() { return callback(user_data); });
-  } else {
-    task_runner->SetRunsTasksOnCurrentThreadCallback(nullptr);
-  }
-}
-
 FlutterDesktopViewControllerRef FlutterDesktopViewControllerCreate(
     const FlutterDesktopViewProperties* view_properties,
     FlutterDesktopEngineRef engine) {
