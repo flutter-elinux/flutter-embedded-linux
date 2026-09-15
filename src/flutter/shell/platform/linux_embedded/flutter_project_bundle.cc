@@ -33,6 +33,7 @@ FlutterProjectBundle::FlutterProjectBundle(
   } else {
     aot_library_path_ = "";
   }
+  disable_system_fonts_ = properties.disable_system_fonts;
 
   for (int i = 0; i < properties.dart_entrypoint_argc; i++) {
     dart_entrypoint_arguments_.push_back(

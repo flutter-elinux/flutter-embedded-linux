@@ -42,6 +42,10 @@ class FlutterProjectBundle {
   // Returns the path to the ICU data file.
   const std::string& icu_path() { return icu_path_; }
 
+  // Whether the engine should ignore system fonts and use only fonts declared
+  // in the bundle's FontManifest.json.
+  bool disable_system_fonts() const { return disable_system_fonts_; }
+
   // Returns any switches that should be passed to the engine.
   const std::vector<std::string> GetSwitches();
 
@@ -69,6 +73,9 @@ class FlutterProjectBundle {
 
   // Path to the AOT library file, if any.
   std::string aot_library_path_;
+
+  // If true, install a bundle-only fontconfig before engine startup.
+  bool disable_system_fonts_ = false;
 
   // Dart entrypoint arguments.
   std::vector<std::string> dart_entrypoint_arguments_;
