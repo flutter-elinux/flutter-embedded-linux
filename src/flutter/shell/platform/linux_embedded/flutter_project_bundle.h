@@ -42,6 +42,14 @@ class FlutterProjectBundle {
   // Returns the path to the ICU data file.
   const std::string& icu_path() { return icu_path_; }
 
+  // Returns the shader cache directory, or an empty string when disabled.
+  const std::string& persistent_cache_path() { return persistent_cache_path_; }
+
+  // Whether the persistent cache directory is read-only.
+  bool is_persistent_cache_read_only() {
+    return is_persistent_cache_read_only_;
+  }
+
   // Returns any switches that should be passed to the engine.
   const std::vector<std::string> GetSwitches();
 
@@ -69,6 +77,12 @@ class FlutterProjectBundle {
 
   // Path to the AOT library file, if any.
   std::string aot_library_path_;
+
+  // Path to the persistent cache directory, if any.
+  std::string persistent_cache_path_;
+
+  // Whether the persistent cache directory is read-only.
+  bool is_persistent_cache_read_only_ = false;
 
   // Dart entrypoint arguments.
   std::vector<std::string> dart_entrypoint_arguments_;

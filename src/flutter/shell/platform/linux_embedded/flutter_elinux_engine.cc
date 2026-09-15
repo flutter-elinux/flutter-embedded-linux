@@ -6,6 +6,7 @@
 
 #include <rapidjson/document.h>
 
+#include <filesystem>
 #include <iostream>
 #include <sstream>
 
@@ -232,6 +233,20 @@ bool FlutterELinuxEngine::RunWithEntrypoint(const char* entrypoint) {
   args.struct_size = sizeof(FlutterProjectArgs);
   args.assets_path = assets_path_string.c_str();
   args.icu_data_path = icu_path_string.c_str();
+  // We expect the App to create the cache dir, only verify the existence. See
+  // https://github.com/flutter-elinux/flutter-embedded-linux/pull/38#issuecomment-5475075925
+  const std::string& cache_path = project_->persistent_cache_path();
+  if (!cache_path.empty()) {
+    std::error_code ec;
+    if (std::filesystem::is_directory(cache_path, ec)) {
+      args.persistent_cache_path = cache_path.c_str();
+      args.is_persistent_cache_read_only =
+          project_->is_persistent_cache_read_only();
+    } else {
+      ELINUX_LOG(WARNING) << "The persistent cache directory does not exist: "
+                          << cache_path;
+    }
+  }
   args.command_line_argc = static_cast<int>(argv.size());
   args.command_line_argv = argv.size() > 0 ? argv.data() : nullptr;
   args.dart_entrypoint_argc = static_cast<int>(entrypoint_argv.size());

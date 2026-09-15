@@ -33,6 +33,11 @@ FlutterProjectBundle::FlutterProjectBundle(
   } else {
     aot_library_path_ = "";
   }
+  if (properties.persistent_cache_path != nullptr) {
+    persistent_cache_path_ =
+        ConvertWcharToString(properties.persistent_cache_path);
+  }
+  is_persistent_cache_read_only_ = properties.is_persistent_cache_read_only;
 
   for (int i = 0; i < properties.dart_entrypoint_argc; i++) {
     dart_entrypoint_arguments_.push_back(

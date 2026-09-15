@@ -41,6 +41,17 @@ class DartProject {
     return dart_entrypoint_arguments_;
   }
 
+  // Sets the Skia engine's compiled shader cache directory. App owned and
+  // only existence-verified.
+  void set_persistent_cache_path(const std::wstring& path) {
+    persistent_cache_path_ = path;
+  }
+
+  // Sets whether the persistent cache directory is read-only.
+  void set_persistent_cache_read_only(bool read_only) {
+    is_persistent_cache_read_only_ = read_only;
+  }
+
  private:
   // Accessors for internals are private, so that they can be changed if more
   // flexible options for project structures are needed later without it
@@ -53,6 +64,12 @@ class DartProject {
   const std::wstring& assets_path() const { return assets_path_; }
   const std::wstring& icu_data_path() const { return icu_data_path_; }
   const std::wstring& aot_library_path() const { return aot_library_path_; }
+  const std::wstring& persistent_cache_path() const {
+    return persistent_cache_path_;
+  }
+  bool is_persistent_cache_read_only() const {
+    return is_persistent_cache_read_only_;
+  }
 
   // The path to the assets directory.
   std::wstring assets_path_;
@@ -61,6 +78,10 @@ class DartProject {
   // The path to the AOT library. This will always return a path, but non-AOT
   // builds will not be expected to actually have a library at that path.
   std::wstring aot_library_path_;
+  // The Skia engine's compiled shader cache directory. Disabled when empty.
+  std::wstring persistent_cache_path_;
+  // Whether the shader cache directory is read-only.
+  bool is_persistent_cache_read_only_ = false;
   // The list of arguments to pass through to the Dart entrypoint.
   std::vector<std::string> dart_entrypoint_arguments_;
 };
