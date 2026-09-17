@@ -62,19 +62,21 @@ void TaskRunner::EnqueueTask(Task task) {
 }
 
 std::chrono::nanoseconds TaskRunner::ProcessTasks() {
-  const TaskTimePoint now = TaskTimePoint::clock::now();
+  TaskTimePoint now;
 
   std::vector<Task> expired_tasks;
 
   // Process expired tasks.
   {
     std::lock_guard<std::mutex> lock(task_queue_mutex_);
-    // Clear the wakeup first, so tasks posted from here on signal again.
+    // Clear the wakeup before sampling the time, so every task posted
+    // afterwards signals again and every task posted before is due.
     if (wake_pending_) {
       uint64_t value;
       [[maybe_unused]] auto n = read(event_fd_, &value, sizeof(value));
       wake_pending_ = false;
     }
+    now = TaskTimePoint::clock::now();
     while (!task_queue_.empty()) {
       const auto& top = task_queue_.top();
       // If this task (and all tasks after this) has not yet expired, there is

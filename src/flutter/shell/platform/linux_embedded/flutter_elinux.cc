@@ -72,7 +72,7 @@ uint64_t FlutterDesktopEngineProcessMessages(FlutterDesktopEngineRef engine) {
 }
 
 int FlutterDesktopEngineGetEventFd(FlutterDesktopEngineRef engine) {
-  return EngineFromHandle(engine)->task_runner()->GetEventFd();
+  return EngineFromHandle(engine)->GetEventFd();
 }
 
 FlutterDesktopViewControllerRef FlutterDesktopViewControllerCreate(
@@ -139,10 +139,6 @@ bool FlutterDesktopViewDispatchEvent(FlutterDesktopViewRef view) {
 
 int32_t FlutterDesktopViewGetFrameRate(FlutterDesktopViewRef view) {
   return ViewFromHandle(view)->GetFrameRate();
-}
-
-int FlutterDesktopViewGetEventFd(FlutterDesktopViewRef view) {
-  return ViewFromHandle(view)->GetEventFd();
 }
 
 FlutterDesktopEngineRef FlutterDesktopEngineCreate(

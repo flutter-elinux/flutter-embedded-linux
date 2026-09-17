@@ -165,15 +165,6 @@ FLUTTER_EXPORT bool FlutterDesktopViewDispatchEvent(FlutterDesktopViewRef view);
 FLUTTER_EXPORT int32_t
 FlutterDesktopViewGetFrameRate(FlutterDesktopViewRef view);
 
-// Returns a file descriptor that becomes readable when native events are
-// pending for FlutterDesktopViewDispatchEvent, or -1 if the backend does not
-// provide one. The descriptor is owned by the view and must not be closed.
-//
-// This lets a runloop dispatch input as soon as it arrives. It is a wakeup
-// hint only: FlutterDesktopViewDispatchEvent must still be called every frame,
-// as some backends (e.g. Wayland) also deliver vsync from it.
-FLUTTER_EXPORT int FlutterDesktopViewGetEventFd(FlutterDesktopViewRef view);
-
 // ========== Engine ==========
 
 // Creates a Flutter engine with the given properties.
@@ -211,13 +202,18 @@ FLUTTER_EXPORT uint64_t
 FlutterDesktopEngineProcessMessages(FlutterDesktopEngineRef engine);
 
 // Returns a file descriptor that becomes readable when a task is posted to the
-// engine's platform task runner, or -1 if unavailable. The descriptor is owned
-// by the engine and must not be read or closed; it is cleared by
-// FlutterDesktopEngineProcessMessages.
+// engine's platform task runner, or when its view has native events pending.
+// Returns -1 if unavailable. The descriptor is owned by the engine and must not
+// be read or closed.
 //
-// This lets a runloop call FlutterDesktopEngineProcessMessages as soon as work
-// arrives, rather than on its next periodic iteration. It is signalled at most
-// once per call to FlutterDesktopEngineProcessMessages.
+// This lets a runloop call FlutterDesktopEngineProcessMessages and
+// FlutterDesktopViewDispatchEvent as soon as work arrives, rather than on its
+// next periodic iteration. Posted tasks signal it at most once per call to
+// FlutterDesktopEngineProcessMessages, which clears it.
+//
+// It is a wakeup hint only. FlutterDesktopViewDispatchEvent must still be
+// called every frame: some backends (e.g. Wayland) also deliver vsync from it,
+// and native events already queued by another thread may not signal it.
 FLUTTER_EXPORT int FlutterDesktopEngineGetEventFd(
     FlutterDesktopEngineRef engine);
 

@@ -5,6 +5,8 @@
 #include "flutter/shell/platform/linux_embedded/flutter_elinux_engine.h"
 
 #include <rapidjson/document.h>
+#include <sys/epoll.h>
+#include <unistd.h>
 
 #include <iostream>
 #include <sstream>
@@ -121,6 +123,17 @@ static FlutterDesktopMessage ConvertToDesktopMessage(
   return message;
 }
 
+// Adds |fd| to the |epoll_fd| set, if both are valid.
+void AddEventFd(int epoll_fd, int fd) {
+  if (epoll_fd < 0 || fd < 0) {
+    return;
+  }
+  epoll_event event = {};
+  event.events = EPOLLIN;
+  event.data.fd = fd;
+  epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd, &event);
+}
+
 }  // namespace
 
 FlutterELinuxEngine::FlutterELinuxEngine(const FlutterProjectBundle& project)
@@ -167,10 +180,16 @@ FlutterELinuxEngine::FlutterELinuxEngine(const FlutterProjectBundle& project)
       std::make_unique<FlutterELinuxTextureRegistrar>(this, gl_procs_);
 
   vsync_waiter_ = std::make_unique<VsyncWaiter>();
+
+  event_fd_ = epoll_create1(EPOLL_CLOEXEC);
+  AddEventFd(event_fd_, task_runner_->GetEventFd());
 }
 
 FlutterELinuxEngine::~FlutterELinuxEngine() {
   Stop();
+  if (event_fd_ >= 0) {
+    close(event_fd_);
+  }
 }
 
 void FlutterELinuxEngine::SetSwitches(
@@ -297,6 +316,15 @@ bool FlutterELinuxEngine::Stop() {
 
 void FlutterELinuxEngine::SetView(FlutterELinuxView* view) {
   view_ = view;
+
+  auto view_event_fd = view_ ? view_->GetEventFd() : -1;
+  if (view_event_fd != view_event_fd_) {
+    if (event_fd_ >= 0 && view_event_fd_ >= 0) {
+      epoll_ctl(event_fd_, EPOLL_CTL_DEL, view_event_fd_, nullptr);
+    }
+    AddEventFd(event_fd_, view_event_fd);
+    view_event_fd_ = view_event_fd;
+  }
 }
 
 // Returns the currently configured Plugin Registrar.
