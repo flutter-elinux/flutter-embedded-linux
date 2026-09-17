@@ -201,6 +201,22 @@ FLUTTER_EXPORT bool FlutterDesktopEngineRun(FlutterDesktopEngineRef engine,
 FLUTTER_EXPORT uint64_t
 FlutterDesktopEngineProcessMessages(FlutterDesktopEngineRef engine);
 
+// Returns a file descriptor that becomes readable when a task is posted to the
+// engine's platform task runner, or when its view has native events pending.
+// Returns -1 if unavailable. The descriptor is owned by the engine and must not
+// be read or closed.
+//
+// This lets a runloop call FlutterDesktopEngineProcessMessages and
+// FlutterDesktopViewDispatchEvent as soon as work arrives, rather than on its
+// next periodic iteration. Posted tasks signal it at most once per call to
+// FlutterDesktopEngineProcessMessages, which clears it.
+//
+// It is a wakeup hint only. FlutterDesktopViewDispatchEvent must still be
+// called every frame: some backends (e.g. Wayland) also deliver vsync from it,
+// and native events already queued by another thread may not signal it.
+FLUTTER_EXPORT int FlutterDesktopEngineGetEventFd(
+    FlutterDesktopEngineRef engine);
+
 FLUTTER_EXPORT void FlutterDesktopEngineReloadSystemFonts(
     FlutterDesktopEngineRef engine);
 

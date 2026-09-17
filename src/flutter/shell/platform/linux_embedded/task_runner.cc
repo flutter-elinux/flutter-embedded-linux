@@ -4,6 +4,9 @@
 
 #include "flutter/shell/platform/linux_embedded/task_runner.h"
 
+#include <sys/eventfd.h>
+#include <unistd.h>
+
 #include <atomic>
 #include <iostream>
 #include <utility>
@@ -15,7 +18,14 @@ TaskRunner::TaskRunner(std::thread::id main_thread_id,
                        const TaskExpiredCallback& on_task_expired)
     : main_thread_id_(main_thread_id),
       get_current_time_(get_current_time),
-      on_task_expired_(std::move(on_task_expired)) {}
+      on_task_expired_(std::move(on_task_expired)),
+      event_fd_(eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK)) {}
+
+TaskRunner::~TaskRunner() {
+  if (event_fd_ >= 0) {
+    close(event_fd_);
+  }
+}
 
 bool TaskRunner::RunsTasksOnCurrentThread() const {
   return std::this_thread::get_id() == main_thread_id_;
@@ -43,16 +53,30 @@ void TaskRunner::EnqueueTask(Task task) {
 
   std::lock_guard<std::mutex> lock(task_queue_mutex_);
   task_queue_.push(task);
+
+  // Signal under the lock, so that it stays consistent with |wake_pending_|.
+  if (!wake_pending_ && event_fd_ >= 0) {
+    uint64_t value = 1;
+    wake_pending_ = write(event_fd_, &value, sizeof(value)) == sizeof(value);
+  }
 }
 
 std::chrono::nanoseconds TaskRunner::ProcessTasks() {
-  const TaskTimePoint now = TaskTimePoint::clock::now();
+  TaskTimePoint now;
 
   std::vector<Task> expired_tasks;
 
   // Process expired tasks.
   {
     std::lock_guard<std::mutex> lock(task_queue_mutex_);
+    // Clear the wakeup before sampling the time, so every task posted
+    // afterwards signals again and every task posted before is due.
+    if (wake_pending_) {
+      uint64_t value;
+      [[maybe_unused]] auto n = read(event_fd_, &value, sizeof(value));
+      wake_pending_ = false;
+    }
+    now = TaskTimePoint::clock::now();
     while (!task_queue_.empty()) {
       const auto& top = task_queue_.top();
       // If this task (and all tasks after this) has not yet expired, there is
