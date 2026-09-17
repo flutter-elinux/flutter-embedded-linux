@@ -53,10 +53,9 @@ class FlutterEngine : public PluginRegistry {
   // last return value from this function.
   std::chrono::nanoseconds ProcessMessages();
 
-  // Sets a callback invoked whenever a task is posted to the platform task
-  // runner. See FlutterDesktopEngineSetTaskPostedCallback.
-  void SetTaskPostedCallback(FlutterDesktopTaskPostedCallback callback,
-                             void* user_data);
+  // Returns a file descriptor that becomes readable when a task is posted to
+  // the platform task runner, or -1. See FlutterDesktopEngineGetEventFd.
+  int GetEventFd();
 
   // Tells the engine that the system font list has changed. Should be called
   // by clients when OS-level font changes happen (e.g., WM_FONTCHANGE in a
