@@ -71,17 +71,8 @@ uint64_t FlutterDesktopEngineProcessMessages(FlutterDesktopEngineRef engine) {
       .count();
 }
 
-void FlutterDesktopEngineSetTaskPostedCallback(
-    FlutterDesktopEngineRef engine,
-    FlutterDesktopTaskPostedCallback callback,
-    void* user_data) {
-  auto task_runner = EngineFromHandle(engine)->task_runner();
-  if (callback) {
-    task_runner->SetTaskPostedCallback(
-        [callback, user_data]() { callback(user_data); });
-  } else {
-    task_runner->SetTaskPostedCallback(nullptr);
-  }
+int FlutterDesktopEngineGetEventFd(FlutterDesktopEngineRef engine) {
+  return EngineFromHandle(engine)->task_runner()->GetEventFd();
 }
 
 FlutterDesktopViewControllerRef FlutterDesktopViewControllerCreate(

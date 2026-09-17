@@ -210,21 +210,16 @@ FLUTTER_EXPORT bool FlutterDesktopEngineRun(FlutterDesktopEngineRef engine,
 FLUTTER_EXPORT uint64_t
 FlutterDesktopEngineProcessMessages(FlutterDesktopEngineRef engine);
 
-// Callback invoked when a task is posted to the platform task runner.
-typedef void (*FlutterDesktopTaskPostedCallback)(void* /* user data */);
-
-// Sets a callback invoked whenever a task is posted to the engine's platform
-// task runner, or clears it if |callback| is null.
+// Returns a file descriptor that becomes readable when a task is posted to the
+// engine's platform task runner, or -1 if unavailable. The descriptor is owned
+// by the engine and must not be read or closed; it is cleared by
+// FlutterDesktopEngineProcessMessages.
 //
 // This lets a runloop call FlutterDesktopEngineProcessMessages as soon as work
-// arrives, rather than on its next periodic iteration. The callback runs on the
-// posting thread, which may be any thread including the platform thread, and
-// must not call back into the engine. |user_data| must remain valid until the
-// engine is destroyed.
-FLUTTER_EXPORT void FlutterDesktopEngineSetTaskPostedCallback(
-    FlutterDesktopEngineRef engine,
-    FlutterDesktopTaskPostedCallback callback,
-    void* user_data);
+// arrives, rather than on its next periodic iteration. It is signalled at most
+// once per call to FlutterDesktopEngineProcessMessages.
+FLUTTER_EXPORT int FlutterDesktopEngineGetEventFd(
+    FlutterDesktopEngineRef engine);
 
 FLUTTER_EXPORT void FlutterDesktopEngineReloadSystemFonts(
     FlutterDesktopEngineRef engine);
