@@ -27,10 +27,6 @@ class FlutterView {
   // Returns the display frame rate.
   int32_t GetFrameRate() { return FlutterDesktopViewGetFrameRate(view_); }
 
-  // Returns a file descriptor that becomes readable when native events are
-  // pending, or -1 if unsupported. See FlutterDesktopViewGetEventFd.
-  int GetEventFd() { return FlutterDesktopViewGetEventFd(view_); }
-
  private:
   // Handle for interacting with the C API's view.
   FlutterDesktopViewRef view_ = nullptr;

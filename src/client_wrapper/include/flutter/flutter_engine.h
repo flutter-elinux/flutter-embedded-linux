@@ -53,8 +53,8 @@ class FlutterEngine : public PluginRegistry {
   // last return value from this function.
   std::chrono::nanoseconds ProcessMessages();
 
-  // Returns a file descriptor that becomes readable when a task is posted to
-  // the platform task runner, or -1. See FlutterDesktopEngineGetEventFd.
+  // Returns a file descriptor that becomes readable when there is work for the
+  // runloop, or -1. See FlutterDesktopEngineGetEventFd.
   int GetEventFd();
 
   // Tells the engine that the system font list has changed. Should be called
