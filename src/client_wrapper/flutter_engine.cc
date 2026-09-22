@@ -68,6 +68,10 @@ std::chrono::nanoseconds FlutterEngine::ProcessMessages() {
   return std::chrono::nanoseconds(FlutterDesktopEngineProcessMessages(engine_));
 }
 
+int FlutterEngine::GetEventFd() {
+  return FlutterDesktopEngineGetEventFd(engine_);
+}
+
 void FlutterEngine::ReloadSystemFonts() {
   FlutterDesktopEngineReloadSystemFonts(engine_);
 }

@@ -71,6 +71,10 @@ uint64_t FlutterDesktopEngineProcessMessages(FlutterDesktopEngineRef engine) {
       .count();
 }
 
+int FlutterDesktopEngineGetEventFd(FlutterDesktopEngineRef engine) {
+  return EngineFromHandle(engine)->GetEventFd();
+}
+
 FlutterDesktopViewControllerRef FlutterDesktopViewControllerCreate(
     const FlutterDesktopViewProperties* view_properties,
     FlutterDesktopEngineRef engine) {

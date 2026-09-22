@@ -511,6 +511,10 @@ int32_t FlutterELinuxView::GetFrameRate() {
   return binding_handler_->GetFrameRate();
 }
 
+int FlutterELinuxView::GetEventFd() {
+  return binding_handler_->GetEventFd();
+}
+
 FlutterTransformation FlutterELinuxView::GetRootSurfaceTransformation() {
   auto degree = binding_handler_->GetRotationDegree();
   if (view_rotation_degree_ != degree) {
