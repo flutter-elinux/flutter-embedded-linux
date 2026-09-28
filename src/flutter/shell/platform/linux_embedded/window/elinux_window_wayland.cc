@@ -124,8 +124,8 @@ const xdg_toplevel_listener ELinuxWindowWayland::kXdgToplevelListener = {
             std::swap(width, height);
           }
 
-          int32_t next_width_dip = width / self->current_scale_;
-          int32_t next_height_dip = height / self->current_scale_;
+          int32_t next_width_dip = width;
+          int32_t next_height_dip = height;
           if (self->restore_window_required_) {
             self->restore_window_required_ = false;
             next_width_dip = self->restore_window_width_;
