@@ -1123,6 +1123,22 @@ ELinuxWindowWayland::ELinuxWindowWayland(
   wl_registry_add_listener(wl_registry_, &kWlRegistryListener, this);
   wl_display_roundtrip(wl_display_);
 
+   // Second roundtrip to get output scale information
+   // Output scale events arrive after the initial roundtrip
+   wl_display_roundtrip(wl_display_);
+
+    // Update current_scale_ with detected output scale after roundtrips
+    // to ensure surface is created with correct scale from the start
+    if (!view_properties_.force_scale_factor && !wl_output_scale_factors_.empty()) {
+      double max_scale = 1.0;
+      for (const auto& [output_id, scale] : wl_output_scale_factors_) {
+        if (scale > max_scale) {
+          max_scale = scale;
+        }
+      }
+      current_scale_ = max_scale;
+    }
+
   for (auto& [seat, _] : seat_inputs_map_) {
     if (wl_data_device_manager_ && seat) {
       wl_data_device_ =
