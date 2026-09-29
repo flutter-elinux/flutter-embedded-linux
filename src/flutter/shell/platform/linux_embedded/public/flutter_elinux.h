@@ -46,6 +46,14 @@ typedef struct {
   // it will be ignored in that case.
   const wchar_t* aot_library_path;
 
+  // The path to the Skia engine's compiled shader cache directory. The app
+  // owns the directory; it is only verified to exist. This can be nullptr
+  // to disable the persistent cache. Ignored by Impeller.
+  const wchar_t* persistent_cache_path;
+
+  // Whether the shader cache directory is read-only.
+  bool is_persistent_cache_read_only;
+
   // Number of elements in the array passed in as dart_entrypoint_argv.
   int dart_entrypoint_argc;
 

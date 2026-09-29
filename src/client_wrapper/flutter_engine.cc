@@ -16,6 +16,12 @@ FlutterEngine::FlutterEngine(const DartProject& project) {
   c_engine_properties.assets_path = project.assets_path().c_str();
   c_engine_properties.icu_data_path = project.icu_data_path().c_str();
   c_engine_properties.aot_library_path = project.aot_library_path().c_str();
+  if (!project.persistent_cache_path().empty()) {
+    c_engine_properties.persistent_cache_path =
+        project.persistent_cache_path().c_str();
+    c_engine_properties.is_persistent_cache_read_only =
+        project.is_persistent_cache_read_only();
+  }
 
   const std::vector<std::string>& entrypoint_args =
       project.dart_entrypoint_arguments();
