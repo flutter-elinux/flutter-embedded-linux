@@ -61,6 +61,10 @@ class FlutterELinuxEngine {
   // headless engines.
   FlutterELinuxView* view() { return view_; }
 
+  // Returns an epoll fd that becomes readable when a task is posted or the
+  // view has native events pending, or -1 if unavailable.
+  int GetEventFd() const { return event_fd_; }
+
   // Returns the currently configured Plugin Registrar.
   FlutterDesktopPluginRegistrarRef GetRegistrar();
 
@@ -168,6 +172,10 @@ class FlutterELinuxEngine {
 
   // Task runner for tasks posted from the engine.
   std::unique_ptr<TaskRunner> task_runner_;
+
+  // Epoll set of the task runner's and the view's event fds.
+  int event_fd_ = -1;
+  int view_event_fd_ = -1;
 
   // The plugin messenger handle given to API clients.
   FlutterDesktopMessengerReferenceOwner messenger_ = {

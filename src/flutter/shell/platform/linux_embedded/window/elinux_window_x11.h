@@ -26,6 +26,9 @@ class ELinuxWindowX11 : public ELinuxWindow, public WindowBindingHandler {
   bool DispatchEvent() override;
 
   // |FlutterWindowBindingHandler|
+  int GetEventFd() override;
+
+  // |FlutterWindowBindingHandler|
   bool CreateRenderSurface(int32_t width,
                            int32_t height,
                            bool enable_impeller) override;

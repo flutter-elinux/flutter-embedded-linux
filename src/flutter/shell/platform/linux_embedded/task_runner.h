@@ -29,10 +29,13 @@ class TaskRunner {
   TaskRunner(std::thread::id main_thread_id,
              CurrentTimeProc get_current_time,
              const TaskExpiredCallback& on_task_expired);
-  ~TaskRunner() = default;
+  ~TaskRunner();
 
   // Returns if the current thread is the UI thread.
   bool RunsTasksOnCurrentThread() const;
+
+  // Returns an eventfd that becomes readable when a task is posted, or -1.
+  int GetEventFd() const { return event_fd_; }
 
   // Post a Flutter engine task to the event loop for delayed execution.
   void PostFlutterTask(FlutterTask flutter_task,
@@ -84,6 +87,10 @@ class TaskRunner {
   TaskExpiredCallback on_task_expired_;
   std::mutex task_queue_mutex_;
   std::priority_queue<Task, std::deque<Task>, Task::Comparer> task_queue_;
+  // Signalled once per ProcessTasks, on the first post after it clears
+  // |wake_pending_|. Both are guarded by |task_queue_mutex_|.
+  int event_fd_ = -1;
+  bool wake_pending_ = false;
 };
 
 }  // namespace flutter

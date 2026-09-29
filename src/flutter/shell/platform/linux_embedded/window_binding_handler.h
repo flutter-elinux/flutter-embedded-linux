@@ -64,6 +64,10 @@ class WindowBindingHandler {
   // Returns the frame rate of the display.
   virtual int32_t GetFrameRate() = 0;
 
+  // Returns a file descriptor that becomes readable when DispatchEvent has
+  // native events to process, or -1 if not supported.
+  virtual int GetEventFd() { return -1; }
+
   // Sets the cursor that should be used when the mouse is over the Flutter
   // content. See mouse_cursor.dart for the values and meanings of cursor_name.
   virtual void UpdateFlutterCursor(const std::string& cursor_name) = 0;

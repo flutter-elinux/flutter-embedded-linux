@@ -52,6 +52,10 @@ bool ELinuxWindowX11::IsValid() const {
   return true;
 }
 
+int ELinuxWindowX11::GetEventFd() {
+  return display_ ? ConnectionNumber(display_) : -1;
+}
+
 bool ELinuxWindowX11::DispatchEvent() {
   while (XPending(display_)) {
     XEvent event;

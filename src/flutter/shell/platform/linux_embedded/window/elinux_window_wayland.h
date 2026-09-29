@@ -53,6 +53,9 @@ class ELinuxWindowWayland : public ELinuxWindow, public WindowBindingHandler {
   bool DispatchEvent() override;
 
   // |FlutterWindowBindingHandler|
+  int GetEventFd() override;
+
+  // |FlutterWindowBindingHandler|
   bool CreateRenderSurface(int32_t width_px,
                            int32_t height_px,
                            bool enable_impeller) override;
