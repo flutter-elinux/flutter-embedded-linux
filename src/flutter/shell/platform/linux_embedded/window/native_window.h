@@ -59,8 +59,10 @@ class NativeWindow {
   virtual void SwapBuffers() { /* do nothing. */ };
 
  protected:
-  EGLNativeWindowType window_;
-  EGLNativeWindowType window_offscreen_;
+  // Value-initialized: subclass constructors can bail out before creating the
+  // native windows, and their destructors still test these.
+  EGLNativeWindowType window_ = {};
+  EGLNativeWindowType window_offscreen_ = {};
   bool enable_vsync_;
   // Physical width of the window.
   int32_t width_;

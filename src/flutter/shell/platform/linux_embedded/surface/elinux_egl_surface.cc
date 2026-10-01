@@ -87,7 +87,16 @@ bool ELinuxEGLSurface::MakeCurrent() const {
   //   - https://github.com/sony/flutter-embedded-linux/issues/230
   //   - https://github.com/sony/flutter-embedded-linux/issues/234
   //   - https://github.com/sony/flutter-embedded-linux/issues/220
-  if (!vsync_enabled_) {
+  //
+  // On DRM-GBM the interval is always 0: vsync is handled explicitly by
+  // drmModePageFlip in NativeWindowDrmGbm::SwapBuffers, and throttling in both
+  // places causes timing mismatches that manifest as tearing.
+#if defined(DISPLAY_BACKEND_TYPE_DRM_GBM)
+  constexpr bool kEglThrottlesToVsync = false;
+#else
+  constexpr bool kEglThrottlesToVsync = true;
+#endif
+  if (!vsync_enabled_ || !kEglThrottlesToVsync) {
     if (eglSwapInterval(display_, 0) != EGL_TRUE) {
       ELINUX_LOG(ERROR) << "Failed to eglSwapInterval(Free): "
                         << get_egl_error_cause();
