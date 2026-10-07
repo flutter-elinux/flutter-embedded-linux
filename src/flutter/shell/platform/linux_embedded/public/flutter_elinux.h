@@ -52,6 +52,13 @@ typedef struct {
   // Array of Dart entrypoint arguments. This is deep copied during the call
   // to FlutterDesktopEngineCreate.
   const char** dart_entrypoint_argv;
+
+  // If true, install a private fontconfig configuration containing only the
+  // fonts declared in the bundle's FontManifest.json before engine startup.
+  // System fonts are then invisible to Skia, so missing glyphs render as tofu
+  // rather than falling back to a system typeface. Has no effect if the
+  // embedder was built without fontconfig support.
+  bool disable_system_fonts;
 } FlutterDesktopEngineProperties;
 
 // The View display mode.

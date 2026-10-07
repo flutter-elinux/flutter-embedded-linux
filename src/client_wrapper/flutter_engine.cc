@@ -29,6 +29,7 @@ FlutterEngine::FlutterEngine(const DartProject& project) {
       static_cast<int>(entrypoint_argv.size());
   c_engine_properties.dart_entrypoint_argv =
       entrypoint_argv.size() > 0 ? entrypoint_argv.data() : nullptr;
+  c_engine_properties.disable_system_fonts = project.disable_system_fonts();
 
   engine_ = FlutterDesktopEngineCreate(&c_engine_properties);
 
